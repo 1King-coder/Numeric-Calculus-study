@@ -1,4 +1,4 @@
-from collections.abc import Iterable, Iterator
+from Matrix import Matrix
 import math
 from typing import Any
 import sympy as sym
@@ -77,22 +77,24 @@ class Vector (list):
         return self.x*i + self.y*j + z*k + res
     
     @property
-    def column_matrix (self) -> list:
+    def column_matrix (self) -> 'Matrix':
         """
         Column matrix vector representation.
         """
-        return [
+        column_vector =[
             [entry] for entry in self.entrys
-        ]
+        ] 
+        return Matrix(column_vector)
     
     @property
-    def row_matrix (self) -> list:
+    def row_matrix (self) -> 'Matrix':
         """
         Row matrix vector representation.
         """
-        return [
+        row_vector = [
             [*self.entrys]
         ]
+        return Matrix(row_vector)
 
     def scalar (self, other_vector: 'Vector') -> float:
         """

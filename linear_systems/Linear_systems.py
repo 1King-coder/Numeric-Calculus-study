@@ -7,7 +7,8 @@ class Linear_System (Matrix):
 
     def __init__ (self, linear_sys: list = []) -> None:
         super().__init__ (linear_sys)
-
+        print(self.matrix)
+    
         self.P_factor = Matrix(self.P_factor)
         self.A_factor = Matrix(self.A_factor)
         self.L_factor = Matrix(self.L_factor)
@@ -35,7 +36,6 @@ class Linear_System (Matrix):
             sys[j] = sum(sys[j])
 
         return sys
-
 
     def __repr__ (self) -> str:
         lines_str = [f"l{index + 1} | {self.__system[index]}" for index in range(self.rows_num)]

@@ -28,25 +28,33 @@ class Matrix:
         self.matrix: list = arg
         self.rows_num: int = len(self.matrix)
         self.cols_num: int = len(self.matrix[0])
-        self.num_of_changed_lines = 0
-        self.P_factor = []
-        self.L_factor = []
-        self.A_factor = deepcopy(self.matrix)
-        self.U_factor = self.gaussian_elimination(self.matrix)
+        self.num_of_changed_lines: int = 0
+        self.P_factor: Union[list, None] = []
+        self.L_factor: Union[list, None] = []
+        self.A_factor: Union[list, None] = deepcopy(self.matrix)
+        self.U_factor: Union[list, None] = []
 
         self.size: str = f'{self.rows_num}x{self.cols_num}'
+
+    @property
+    def isColumn (self) -> bool:
+        return self.cols_num == 1
+    
+    @property
+    def isRow (self) -> bool:
+        return self.rows_num == 1
+
 
     @property
     def matrix (self) -> list:
         return self.__matrix
     
     @matrix.setter
-    def matrix (self, arg):
-        if isinstance(arg, list):
-            self.__matrix: list = arg
-            return
-
-        self.__matrix: list = Matrix.gen_matrix(arg[0], arg[1]).matrix
+    def matrix (self, value):
+        if isinstance(value, tuple):
+            value = Matrix.gen_matrix(value[0], value[1]).matrix
+            
+        self.__matrix: Union[list, None] = value
 
     @property
     def P_factor (self):
@@ -54,10 +62,10 @@ class Matrix:
     
     @P_factor.setter
     def P_factor (self, value: list) -> None:
+        if not self.isQuadratic:
+            value = None
 
-        if not value:
-            self.__P_factor = Matrix.gen_matrix(self.rows_num, self.cols_num, True)
-            return
+        value = Matrix.gen_matrix(self.rows_num, self.cols_num, True)
         
         self.__P_factor = value
     
@@ -67,7 +75,10 @@ class Matrix:
         return self.__A_factor
     
     @A_factor.setter
-    def A_factor (self, value: list) -> None:        
+    def A_factor (self, value: list) -> None:
+        if self.isRow or self.isColumn:
+            value = None
+                
         self.__A_factor = value
 
     @property
@@ -76,14 +87,13 @@ class Matrix:
     
     @L_factor.setter
     def L_factor (self, value: list) -> None:
-        if isinstance(value, Matrix):
-            self.__L_factor = value
-            return
-
-        if not value:
+        if self.isRow or self.isColumn:
+            value = None
+        
+        if not isinstance(value, Matrix) and value:
             value = Matrix.map_matrix(lambda i, j: 0, self.rows_num, self.cols_num)
 
-        if value[self.rows_num - 1][self.cols_num-2]:
+        if value and value[self.rows_num - 1][self.cols_num-2]:
             for i in range(self.rows_num):
                 value[i][i] = 1
 
@@ -95,6 +105,14 @@ class Matrix:
     
     @U_factor.setter
     def U_factor (self, value):
+        if value and self.matrix:
+            value = self.gaussian_elimination(self.matrix)
+
+        if self.isRow or self.isColumn:
+            value = None
+
+        
+
         self.__U_factor = value
 
     @property
@@ -109,9 +127,9 @@ class Matrix:
     def det (self) -> Union[int, float]:
         return Determinant.det(self.matrix)
 
-    @staticmethod
-    def isQuadratic (matrix: list) -> bool:
-        return len(matrix) == len(matrix[0])
+    @property
+    def isQuadratic (self) -> bool:
+        return self.rows_num == self.cols_num
 
     @staticmethod
     def map_matrix(func, rows_num: int, cols_num: int) -> list:
@@ -155,7 +173,9 @@ class Matrix:
         """
         Pretty print a Matrix.
         """
-
+        if not self.matrix:
+            return f'The sent matrix has {self.matrix} value'
+        
         print()
         matrix_str = ''
         
@@ -255,7 +275,7 @@ class Matrix:
         def multiply_matrices (i, j, num = 0):
             for k in range(matrix_1.cols_num):
                 num += matrix_1.matrix[i][k] * matrix_2.matrix[k][j]
-            return round(num)
+            return num
         
         return Matrix(Matrix.map_matrix(
             multiply_matrices,
@@ -347,12 +367,14 @@ class Matrix:
         for to_order in to_order_matrices:
             to_order[index], to_order[max_module_index] = to_order[max_module_index], to_order[index]
 
-    def gaussian_elimination (self, matrix: list) -> list:
+    def gaussian_elimination (self, matrix: list) -> Union[list, None]:
         """
         Utilizes gaussian elimination method to partialy escalonate a
         given matrix.
         returns the partialy escalonated matrix (triangular matrix).
         """
+        if self.isRow or self.isColumn:
+            return None
 
         escalonated_matrix = deepcopy(matrix)
         rows_num = len(matrix)
