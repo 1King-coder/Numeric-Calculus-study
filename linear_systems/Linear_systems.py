@@ -10,7 +10,10 @@ class Linear_System (Matrix):
 
         
         self.num_of_changed_lines = 0
+
         self.icognitos = [sym.symbols(f'x{i+1}') for i in range(self.rows_num)]
+        self.icognitos.append(1) # constant
+
         self.system = linear_sys
 
     @property
@@ -30,12 +33,12 @@ class Linear_System (Matrix):
             for index, icognito in enumerate(self.icognitos):
                 sys[j][index] *= icognito
 
-            sys[j] = sum(sys[j])
+            #sys[j] = sum(sys[j])
 
         return sys
 
     def __repr__ (self) -> str:
-        lines_str = [f"l{index + 1} | {self.__system[index]} = 0" for index in range(self.rows_num)]
+        lines_str = [f"l{index + 1} | {sum(self.__system[index])} = 0" for index in range(self.rows_num)]
         string = "\n".join(lines_str)
 
         return string + "\n"
@@ -96,17 +99,61 @@ class Linear_System (Matrix):
 
         return Vector(*solved_icognitos.values())
     
-    def fi (self):
-        def fi_element (row: int, col: int):
-            self.matrix[row][col]/self.matrix[row][row]
-        
-        fi_matrix = self.map_matrix(
+    @property
+    def fi_function (self):
+        """
+        Fi function matrix for Gauss-Jacobi solving linear system method.
+
+        ɸ(x) = [
+            x1 (x2, ..., xn),
+            x2 (x1,x3, ..., xn),
+            x3 (x1, x2, x4, ..., xn),
+            .
+            .
+            .
+        ]
+        """
+        for i in range(self.rows_num):
+            if not self.matrix[i][i]:
+                raise InterruptedError("Can not create fi for matrices with 0 in its diagonal")
+            
+        fi_matrix = []
+
+        for i in range(self.rows_num):
+            fi_matrix.append([])
+            for j in range(self.cols_num):
+                if i == j:
+                    continue
+
+                fi_matrix[i].append(- sym.Rational(self.matrix[i][j], self.matrix[i][i]) * self.icognitos[j])
+
+        fi_matrix = [sum(line) for line in fi_matrix]
+
+        return fi_matrix
+
+    @property
+    def fi_diff (self):
+        """
+        Jacobian matrix of ɸ(x).
+        ɸ'(x) = [
+            ɸ(x)[0].diff(x1), ɸ(x)[0].diff(x2), ɸ(x)[0].diff(x3), ...
+            ɸ(x)[1].diff(x1), ...
+            .
+            .
+            .
+        ]
+        """
+
+        fi_diff = self.map_matrix(
+            lambda i, j: self.fi_function[i].diff(self.icognitos[j]),
+            self.rows_num,
+            self.cols_num - 1
 
         )
-        ...
 
-    def fi_line (self):
-        ...
+        return fi_diff
+
+
 
     
         
@@ -127,15 +174,17 @@ if __name__ == '__main__':
     ]
 
     sys_3 = [
-        [2, -1, 1, 0, -1],
-        [0, 3, 1, 2, -1],
-        [-1, 0, 3, -1, 5],
-        [1, 0, -3, 2, -6]
+        [2, 1, -1, -4],
+        [-1, 1, 1, 0],
+        [1, 3, -1, -8],
     ]
 
 
     linear_system = Linear_System(sys_3)
-    linear_system.fi()
+    print(linear_system.fi_diff)
+    print(linear_system.fi_function)
+
+
     
 
 
