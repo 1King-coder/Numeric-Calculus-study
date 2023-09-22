@@ -15,7 +15,7 @@ class Vector (list):
         self.y = y
         self.append(y)
 
-        self.z = 0
+        self.z = z
         if not isinstance(z, None.__class__):
             self.append(z)
 
@@ -116,6 +116,7 @@ class Vector (list):
         from Matrix import Determinant
         z1 = self.z
         z2 = other_vector.z
+
         if isinstance(self.z, None.__class__) and other_vector.dimension == self.dimension:
             z1 = 0
             z2 = 0
@@ -187,6 +188,13 @@ class Vector (list):
     
 if __name__ == '__main__':
     
-    v = Vector(*[2, 3, 4])
-    u = Vector(2, 3, 4)
+    v = Vector(*[1,2])
+    u = Vector(2, 3)
     print(v.vectorial(u))
+    print(v.row_matrix * u.column_matrix)
+
+    a = sym.symbols('a')
+
+    eq = a + 2
+
+    eq.args

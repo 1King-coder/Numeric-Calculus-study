@@ -7,13 +7,8 @@ class Linear_System (Matrix):
 
     def __init__ (self, linear_sys: list = []) -> None:
         super().__init__ (linear_sys)
-        print(self.matrix)
-    
-        self.P_factor = Matrix(self.P_factor)
-        self.A_factor = Matrix(self.A_factor)
-        self.L_factor = Matrix(self.L_factor)
-        self.U_factor = Matrix(self.U_factor)
 
+        
         self.num_of_changed_lines = 0
         self.icognitos = [sym.symbols(f'x{i+1}') for i in range(self.rows_num)]
         self.system = linear_sys
@@ -24,6 +19,8 @@ class Linear_System (Matrix):
     
     @system.setter
     def system (self, value) -> None:
+        if isinstance(value[0], sym.core.add.Add):
+            ...
         self.__system = self.with_icognitos(value)
 
     def with_icognitos (self, system):
@@ -38,7 +35,7 @@ class Linear_System (Matrix):
         return sys
 
     def __repr__ (self) -> str:
-        lines_str = [f"l{index + 1} | {self.__system[index]}" for index in range(self.rows_num)]
+        lines_str = [f"l{index + 1} | {self.__system[index]} = 0" for index in range(self.rows_num)]
         string = "\n".join(lines_str)
 
         return string + "\n"
@@ -51,14 +48,14 @@ class Linear_System (Matrix):
             if 'factor' in key:
 
                 lines_str = [
-                    f"\tl{index + 1} | {tuple(self.__dict__[key].matrix[index])}"
+                    f"\tl{index + 1} | {tuple(self.__dict__[key][index])}"
                     for index in range(self.rows_num)
                 ]
 
                 string = "\n".join(lines_str)
                 print(f"{key[9:]}:\n{string}")
     
-    def solve (self) -> dict:
+    def solve_by_gauss_elimination (self) -> Vector:
         """
         Function that utilizes the gaussian elimination method
         to triangulate the system and solve it
@@ -67,7 +64,7 @@ class Linear_System (Matrix):
         # Takes the partialy escalonated by gaussian elimination 
         # (U factor of the system) and reverses it to solve it starting from the last
         # variable.
-        U_factor_with_icognitos = self.with_icognitos(self.U_factor.matrix)[::-1]
+        U_factor_with_icognitos = self.with_icognitos(self.U_factor)[::-1]
 
         # Reversed list of the icognitos
         icognitos_to_solve = deepcopy(self.icognitos[::-1])
@@ -86,10 +83,11 @@ class Linear_System (Matrix):
 
             # takes the result by using sym.solve, where it takes the
             # line equation and solve it for equation = 0
-            res = sym.solve(line, icognitos_to_solve[index])[0]
+            res = sym.solve(line, icognitos_to_solve[index], rational=False)[0]
 
             # Round and store the results
-            solved_icognitos[icognitos_to_solve[index]] = round(res, 4)
+            print (res)
+            solved_icognitos[icognitos_to_solve[index]] = res
 
         # Sorts the solutions
         solved_icognitos = {
@@ -97,6 +95,20 @@ class Linear_System (Matrix):
         }
 
         return Vector(*solved_icognitos.values())
+    
+    def fi (self):
+        def fi_element (row: int, col: int):
+            self.matrix[row][col]/self.matrix[row][row]
+        
+        fi_matrix = self.map_matrix(
+
+        )
+        ...
+
+    def fi_line (self):
+        ...
+
+    
         
 if __name__ == '__main__':
 
@@ -114,12 +126,16 @@ if __name__ == '__main__':
         [6, 7, 9, 8],
     ]
 
-    
-    linear_system = Linear_System(sys_2)
+    sys_3 = [
+        [2, -1, 1, 0, -1],
+        [0, 3, 1, 2, -1],
+        [-1, 0, 3, -1, 5],
+        [1, 0, -3, 2, -6]
+    ]
 
 
-
-    linear_system.show_LU_decompotion()
+    linear_system = Linear_System(sys_3)
+    linear_system.fi()
     
 
 

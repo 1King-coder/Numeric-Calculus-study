@@ -89,11 +89,13 @@ class Matrix:
     def L_factor (self, value: list) -> None:
         if self.isRow or self.isColumn:
             value = None
+            self.__L_factor = value
+            return
         
-        if not isinstance(value, Matrix) and value:
+        if not value:
             value = Matrix.map_matrix(lambda i, j: 0, self.rows_num, self.cols_num)
 
-        if value and value[self.rows_num - 1][self.cols_num-2]:
+        if value[self.rows_num - 1][self.cols_num-2]:
             for i in range(self.rows_num):
                 value[i][i] = 1
 
@@ -105,15 +107,24 @@ class Matrix:
     
     @U_factor.setter
     def U_factor (self, value):
-        if value and self.matrix:
-            value = self.gaussian_elimination(self.matrix)
-
         if self.isRow or self.isColumn:
             value = None
+            self.__U_factor = value
+            return
 
-        
+        value = self.gaussian_elimination(self.matrix)
 
         self.__U_factor = value
+
+    @property
+    def inf_module (self):
+        return self.__inf_module
+    
+    @inf_module.setter
+    def inf_module (self, value):
+
+        
+        self.__inf_module = value
 
     @property
     def num_of_changed_lines (self):
@@ -125,7 +136,7 @@ class Matrix:
 
     @property
     def det (self) -> Union[int, float]:
-        return Determinant.det(self.matrix)
+        return Determinant.det(self)
 
     @property
     def isQuadratic (self) -> bool:
@@ -361,7 +372,7 @@ class Matrix:
         to_order_matrices.append(matrix)
         max_module_index = matrix.index(sorted_matrix[0])
 
-        if max_module_index != 0:
+        if max_module_index - index != 0:
             self.num_of_changed_lines += 1
 
         for to_order in to_order_matrices:
@@ -379,16 +390,27 @@ class Matrix:
         escalonated_matrix = deepcopy(matrix)
         rows_num = len(matrix)
         cols_num = len(matrix[0])
+        self.gauss_iterations = []
         
         for i in range(cols_num):
             self.order_lines(escalonated_matrix, [self.P_factor, self.A_factor, self.L_factor], i)
 
             for j in range(i + 1, rows_num):
                 multiplier = sym.Rational(escalonated_matrix[j][i], escalonated_matrix[i][i])
+                
                 escalonated_matrix[j] = [
                     escalonated_matrix[j][k] - escalonated_matrix[i][k]*multiplier
                     for k in range(cols_num)
                 ]
+                self.gauss_iterations.append(
+                    {
+                        'iter': i,
+                        'line': j+1,
+                        'escalonated matrix': deepcopy(escalonated_matrix),
+                        'multiplier': multiplier
+                    }
+                )
+
                 self.L_factor[j][i] = multiplier            
 
         self.L_factor = self.L_factor # To ensure there is the 1's in de main diagonal
@@ -435,11 +457,18 @@ class Determinant:
     calculate a Matrix determinant.
     """
     @staticmethod
-    def det(matrix: list) -> Union[int, float]:
-            
-        size = f"{len(matrix)}x{len(matrix[0])}"
+    def det(matrix: Union['Matrix', list]) -> Union[int, float]:
+        
+        if isinstance(matrix, list):
+            isQuadratic = len(matrix) == len(matrix[0])
+            size = f"{len(matrix)}x{len(matrix[0])}"
 
-        if not Matrix.isQuadratic(matrix):
+        if isinstance(matrix, Matrix):
+            size = matrix.size
+            isQuadratic = matrix.isQuadratic
+            
+
+        if not isQuadratic:
             raise TypeError('Only quadratic matrices can have determinant.')
 
         if size == '2x2':
@@ -452,39 +481,53 @@ class Determinant:
     
     # Base for 2x2 Matrix
     @staticmethod
-    def det2x2(matrix: list) -> Union[int, float]:
+    def det2x2(matrix: Union['Matrix', list]) -> Union[int, float]:
+        matrix_list = matrix
+
+        if isinstance(matrix, Matrix):
+            matrix_list = matrix.matrix
+
         return (
-            matrix[0][0] * matrix[1][1] -
-            matrix[0][1] * matrix[1][0]
+            matrix_list[0][0] * matrix_list[1][1] -
+            matrix_list[0][1] * matrix_list[1][0]
         )
     
     # Base for 3x3 Matrix
     @staticmethod
-    def det3x3(matrix: list) -> Union[int, float]:
+    def det3x3(matrix: Union['Matrix', list]) -> Union[int, float]:
+        matrix_list = matrix
+
+        if isinstance(matrix, Matrix):
+            matrix_list = matrix.matrix
+
         part_1 = (
-            matrix[0][0]*matrix[1][1]*matrix[2][2] +
-            matrix[0][1]*matrix[1][2]*matrix[2][0] +
-            matrix[0][2]*matrix[1][0]*matrix[2][1]
+            matrix_list[0][0]*matrix_list[1][1]*matrix_list[2][2] +
+            matrix_list[0][1]*matrix_list[1][2]*matrix_list[2][0] +
+            matrix_list[0][2]*matrix_list[1][0]*matrix_list[2][1]
         )
 
         part_2 = (
-            matrix[0][2]*matrix[1][1]*matrix[2][0] +
-            matrix[0][0]*matrix[1][2]*matrix[2][1] +
-            matrix[0][1]*matrix[1][0]*matrix[2][2]
+            matrix_list[0][2]*matrix_list[1][1]*matrix_list[2][0] +
+            matrix_list[0][0]*matrix_list[1][2]*matrix_list[2][1] +
+            matrix_list[0][1]*matrix_list[1][0]*matrix_list[2][2]
         )
         
         return part_1 - part_2
     
     @staticmethod
-    def detNxN (matrix: list, det: int = 1) -> Union[int, float]:
+    def detNxN (matrix: Union['Matrix', list], det: int = 1) -> Union[int, float]:
         """
         Create P.A = L.U fatoration and solve determinant signal problem
         """
-        matrix = Matrix(matrix)
+        if not isinstance(matrix, Matrix):
+            matrix = Matrix(matrix)
+
         triangular_matrix = matrix.gaussian_elimination(matrix.matrix)
         
         for i in range(len(triangular_matrix)):
             det *= triangular_matrix[i][i]
+        
+        print(matrix.num_of_changed_lines)
 
         return det * (-1)**matrix.num_of_changed_lines
 
@@ -537,10 +580,11 @@ if __name__ == "__main__":
     ]
 
 
+
     A = Matrix(matrix_a)
 
 
-    print(Matrix(A.L_factor))
+    print(*A.gauss_iterations, sep='\n')
     
     
     
