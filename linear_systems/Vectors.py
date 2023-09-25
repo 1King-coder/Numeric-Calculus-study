@@ -7,22 +7,12 @@ i, j, k = sym.symbols('i j k')
 
 class Vector (list):
 
+    def __init__ (self, *args):
+    
+        for index in range(len(args)):
+            self.append(args[index])
+            self.__dict__[f'x{index + 1}'] = args[index]
 
-    def __init__ (self, x: float = 0, y: float = 0, z: float = None, *args):
-        self.x = x
-        self.append(x)
-        
-        self.y = y
-        self.append(y)
-
-        self.z = z
-        if not isinstance(z, None.__class__):
-            self.append(z)
-
-        if args:
-            for index in range(len(args)):
-                self.append(args[index])
-                self.__dict__[f'z{index}'] = args[index]
 
     @property
     def dimension (self):
@@ -31,6 +21,7 @@ class Vector (list):
     @property
     def entrys (self):
         entrys = [entry for entry in self]
+
         return entrys
 
     def __repr__(self) -> str:
@@ -42,9 +33,6 @@ class Vector (list):
         """
         Vector's module.
         """
-
-        if isinstance(self.z, None.__class__):
-            return math.sqrt(math.pow(self.x, 2) + math.pow(self.y, 2))
        
         return math.sqrt(sum([math.pow(entry, 2) for entry in self.entrys]))
     
@@ -54,8 +42,6 @@ class Vector (list):
         """
         Unitary version of the vector.
         """
-        if isinstance(self.z, None.__class__):
-            return Vector(self.x/self.module, self.y/self.module)
 
         return Vector(*[entry/self.module for entry in self.entrys])
     
@@ -64,17 +50,9 @@ class Vector (list):
         """
         Representation of the vectors with i, j and k.
         """
-        z = self.z
+        res = sum([self.entrys[i]*sym.symbols(f'x{i}') for i in range(self.dimension)])
 
-        if isinstance(self.z, None.__class__):
-            z = 0
-
-        res = 0
-        other_axes = [self.entrys[i]*sym.symbols(f'z{i-3}') for i in range(3, self.dimension)]
-        for axe in other_axes:
-            res += axe
-
-        return self.x*i + self.y*j + z*k + res
+        return res
     
     @property
     def column_matrix (self) -> 'Matrix':
@@ -103,31 +81,30 @@ class Vector (list):
 
         if other_vector.dimension != self.dimension:
             raise ArithmeticError("Can not make scalar product between vectors with different dimensions")
-
-        if isinstance(self.z, None.__class__):
-            return self.x*other_vector.x + self.y*other_vector.y
         
         return sum([self.entrys[i]*other_vector.entrys[i] for i in range(self.dimension)])
-    
+
     def vectorial (self, other_vector: 'Vector') -> 'Vector':
         """
         Vectorial product between the vectors.
         """
         from Matrix import Determinant
-        z1 = self.z
-        z2 = other_vector.z
+        
+        if self.dimension > 3 or other_vector.dimension != self.dimension or self.dimension < 2 and other_vector.dimension < 2:
+            raise ArithmeticError("Can not make vetorial product in dimension greater than 3")
+        
 
-        if isinstance(self.z, None.__class__) and other_vector.dimension == self.dimension:
+        if self.dimension == 2:
             z1 = 0
             z2 = 0
-        
-        if self.dimension > 3:
-            raise ArithmeticError("Can not make vetorial product in dimension greater than 3")
+        else:
+            z1 = self[2]
+            z2 = other_vector[2]
 
         res = Determinant.det([
             [i, j, k],
-            [self.x, self.y, z1],
-            [other_vector.x, other_vector.y, z2],
+            [self[0], self[1], z1],
+            [other_vector[0], other_vector[1], z2],
         ])
 
         x, y, z = res.coeff(i), res.coeff(j), res.coeff(k)
@@ -141,6 +118,9 @@ class Vector (list):
         return round(math.degrees(teta), 2)
 
     def __mul__ (self, other_vector: 'Vector') -> float or 'Vector':
+        """
+        Interpretate multiplication as a scalar product.
+        """
         if isinstance(other_vector, Vector):
             return self.scalar(other_vector)
         
@@ -159,12 +139,18 @@ class Vector (list):
         return 180 - self.angule_between(other_vector)
     
     def __add__ (self, other_vector: 'Vector') -> 'Vector':
+        """
+        Addition of vectors.
+        """
         if self.dimension != other_vector.dimension:
             raise ArithmeticError('Can not sum different dimensions vectors!')
         
         return Vector(*[round(self.entrys[i] + other_vector.entrys[i], 6) for i in range(len(self.entrys))])
     
     def __sub__ (self, other_vector: 'Vector') -> 'Vector':
+        """
+        Subtraction of vectors.
+        """
         if self.dimension != other_vector.dimension:
             raise ArithmeticError('Can not sum different dimensions vectors!')
         
