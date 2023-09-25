@@ -93,7 +93,11 @@ class Matrix:
             return
         
         if not value:
-            value = Matrix.map_matrix(lambda i, j: 0, self.rows_num, self.cols_num)
+            value = Matrix.map_matrix(
+                lambda i, j: 0,
+                self.rows_num,
+                self.cols_num
+            )
 
         if value[self.rows_num - 1][self.cols_num-2]:
             for i in range(self.rows_num):
@@ -155,7 +159,12 @@ class Matrix:
             new_matrix.append([])
 
             for j in range(cols_num):
-                new_matrix[i].append(func(i, j))
+                value = func(i, j)
+
+                if not isinstance(value, None.__class__):
+                    new_matrix[i].append(func(i, j))
+
+                
 
         # new_matrix = list(filter(lambda x: x != [], new_matrix))
 

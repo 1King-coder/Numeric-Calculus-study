@@ -99,8 +99,7 @@ class Linear_System (Matrix):
 
         return Vector(*solved_icognitos.values())
     
-    @property
-    def fi_function (self):
+    def fi_function (self, system_matrix: 'Matrix', icognitos: list):
         """
         Fi function matrix for Gauss-Jacobi solving linear system method.
 
@@ -108,50 +107,63 @@ class Linear_System (Matrix):
             x1 (x2, ..., xn),
             x2 (x1,x3, ..., xn),
             x3 (x1, x2, x4, ..., xn),
-            .
-            .
-            .
+            ...
         ]
         """
-        for i in range(self.rows_num):
-            if not self.matrix[i][i]:
+        for i in range(system_matrix.rows_num):
+            if not system_matrix.matrix[i][i]:
                 raise InterruptedError("Can not create fi for matrices with 0 in its diagonal")
+
+        def fi_matrix_gen (i, j):
+            if not i == j:
+                return -sym.Rational(system_matrix.matrix[i][j], system_matrix.matrix[i][i]) * icognitos[j]
             
-        fi_matrix = []
-
-        for i in range(self.rows_num):
-            fi_matrix.append([])
-            for j in range(self.cols_num):
-                if i == j:
-                    continue
-
-                fi_matrix[i].append(- sym.Rational(self.matrix[i][j], self.matrix[i][i]) * self.icognitos[j])
+        fi_matrix = self.map_matrix (
+            fi_matrix_gen,
+            system_matrix.rows_num,
+            system_matrix.cols_num
+        )
 
         fi_matrix = [sum(line) for line in fi_matrix]
 
         return fi_matrix
 
-    @property
-    def fi_diff (self):
+    def fi_diff (self, fi_func: list, icognitos: list):
         """
         Jacobian matrix of ɸ(x).
         ɸ'(x) = [
             ɸ(x)[0].diff(x1), ɸ(x)[0].diff(x2), ɸ(x)[0].diff(x3), ...
             ɸ(x)[1].diff(x1), ...
-            .
-            .
-            .
+            ...
         ]
         """
-
         fi_diff = self.map_matrix(
-            lambda i, j: self.fi_function[i].diff(self.icognitos[j]),
+            lambda i, j: fi_func[i].diff(icognitos[j]),
             self.rows_num,
             self.cols_num - 1
-
         )
 
         return fi_diff
+    
+    def guarantee_fi_converge (self) -> bool:
+        """
+        Verify if the fi function obtained has the guarantee to converge to a solution
+        when using gauss-jacobi method.
+        """
+        for i in range(len(self.fi_diff)):
+            alpha = 0
+            for j in range(len(self.fi_diff[0])):
+                aplha += abs(self.fi_diff[i][j])
+
+                if alpha < 1:
+                    return False
+                
+        return True
+    
+    def gauss_scibel_method (self):
+        
+        return
+
 
 
 
@@ -181,8 +193,9 @@ if __name__ == '__main__':
 
 
     linear_system = Linear_System(sys_3)
-    print(linear_system.fi_diff)
-    print(linear_system.fi_function)
+    fi_func = linear_system.fi_function(Matrix(linear_system.matrix), linear_system.icognitos)
+    print(linear_system.fi_diff(fi_func, linear_system.icognitos))
+    print(fi_func)
 
 
     

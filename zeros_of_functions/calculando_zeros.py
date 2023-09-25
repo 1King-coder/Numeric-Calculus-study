@@ -82,12 +82,42 @@ class Func:
         x = decimal((a + b)/2)
         iterations_x = []
         iterations_y = []
+        iterations_list = [
+            {
+                'iter': iteration,
+                f'a{iteration}': a,
+                f'b{iteration}': b,
+                f'x{iteration}': x,
+                'f(x)': self.f(x),
+                'interval': b-a 
+            }
+        ]
+        
 
         while iteration < Max_iterations:
 
             x = decimal((a + b)/2)
 
             if self.f(x) == 0 or decimal((b-a)/2) < TOL:
+                if self.f(x)*self.f(a) < 0:
+                    b = x
+                else:
+                    a = x
+
+                
+                iteration += 1
+                iterations_x.append(x)
+                iterations_y.append(self.f(x))
+                iterations_list.append(
+                    {
+                        'iter': iteration,
+                        f'a{iteration}': a,
+                        f'b{iteration}': b,
+                        f'x{iteration}': x,
+                        'f(x)': self.f(x),
+                        'interval': b - a
+                    }
+                )
                 break
             
             if self.f(x)*self.f(a) < 0:
@@ -99,8 +129,25 @@ class Func:
             iteration += 1
             iterations_x.append(x)
             iterations_y.append(self.f(x))
+            iterations_list.append(
+                {
+                    'iter': iteration,
+                    f'a{iteration}': a,
+                    f'b{iteration}': b,
+                    f'x{iteration}': x,
+                    'f(x)': self.f(x),
+                    'interval': b - a
+                }
+            )
 
-        return {'result': x, 'iter_x': iterations_x, 'iter_y': iterations_y}
+            
+
+        return {
+            'result': x,
+            'iter_x': iterations_x,
+            'iter_y': iterations_y,
+            'iterations': iterations_list
+        }
     
     def newton_method (self, a: float, TOL: float):
         """
@@ -115,9 +162,17 @@ class Func:
         if not self.verify_derivate(a):
             return False
         
+        iteration = 0
         x = a - self.f(a)/self.f(a, self.dfunc)
         iter_x = []
         iter_y = []
+        iterations = [
+            {
+                'iter': iteration,
+                f'x{iteration}': x,
+                'f(x)': self.f(x),
+            }
+        ]
         
         while not abs(self.f(x)) < TOL:
 
@@ -132,10 +187,22 @@ class Func:
 
             iter_x.append(x)
             iter_y.append(self.f(x))
+            iterations.append(
+                {
+                    'iter': iteration,
+                    f'x{iteration}': x,
+                    'f(x)': self.f(x),
+                }
+            )
 
             
 
-        return {'result': x, 'iter_x': iter_x, 'iter_y': iter_y}
+        return {
+            'result': x,
+            'iter_x': iter_x,
+            'iter_y': iter_y,
+            'iterations': iterations
+        }
         
 
         
@@ -145,8 +212,16 @@ class Func:
 
 if __name__ == '__main__':
     # tests
-    lista = [1, 2, 3, 4]
+    x = sym.symbols('x')
 
+    f = x**3 + 4*x**2 - 2
+
+    func = Func(
+        f, x
+    )
+    print(
+        *func.bissection_method(-2, 0, 10**(-1))['iterations'], sep='\n'
+    )
     ...
 
 
