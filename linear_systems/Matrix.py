@@ -413,7 +413,7 @@ class Matrix:
                 ]
                 self.gauss_iterations.append(
                     {
-                        'iter': i,
+                        'iter': i + j,
                         'line': j+1,
                         'escalonated matrix': deepcopy(escalonated_matrix),
                         'multiplier': multiplier

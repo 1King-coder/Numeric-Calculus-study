@@ -164,7 +164,7 @@ class Linear_System (Matrix):
         return alphas_dict
     
     @property
-    def Sassenfeld_crit (self) -> dict:
+    def senfeld_crit (self) -> dict:
         """
         Convergence criterea for gauss-Sciedel linear system solving method.
         if Beta < 1 the results will converge to a solution.
@@ -185,7 +185,7 @@ class Linear_System (Matrix):
                     beta = 1
 
 
-                beta_res += abs(self.matrix[i][j]) * beta
+                beta_res += abs(self.matrix[i][j]) * abs(beta)
 
             betas_dict[f'Beta({i + 1})'] = sym.Rational(beta_res, abs(self.matrix[i][i]))
 
@@ -201,6 +201,8 @@ class Linear_System (Matrix):
                 if not self.matrix[i][j]:
                     has_no_coeff = True
         
+        print(has_no_coeff)
+
         icognitos_values_dict = {
             self.icognitos[i]: 0 for i in range(self.rows_num)
         }
@@ -280,8 +282,12 @@ if __name__ == '__main__':
         [1, -1, -2, -3, 2],
     ]
 
+    sys_4 = [
+        [2, 3, -1, 0]
+    ]
+
     
-    linear_system = Linear_System(sys_2)
+    linear_system = Linear_System(sys_4)
     """
     fi_func = linear_system.fi_function
     fi_diff = linear_system.fi_diff
@@ -289,11 +295,11 @@ if __name__ == '__main__':
 
     print(*fi_func, sep='\n')
     print(Matrix(fi_diff))
-    print(linear_system.Sassenfeld_crit)
+    print(linear_system.senfeld_crit)
     """
     print(*linear_system.gauss_scibel_method(10**(-1)), sep='\n')
 
-    linear_system.show_LU_decompotion()
+    
 
 
     

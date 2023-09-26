@@ -160,14 +160,14 @@ class Vector (list):
     def __round__ (self, decimals: int):
         return Vector(*[round(entry, decimals) for entry in self.entrys])
     
-    def reverse (self) -> None:
+    def reverse (self) -> 'Vector':
         from copy import deepcopy
         reversed_entrys = deepcopy(self.entrys)
         reversed_entrys.reverse()
-        self.__init__(*reversed_entrys)
+        return Vector(*reversed_entrys)
 
-    def invert (self) -> None:
-        self.__init__ (*(self*-1).entrys)
+    def invert (self) -> 'Vector':
+        return Vector(*(self*-1).entrys)
     
     
     
