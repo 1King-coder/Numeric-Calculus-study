@@ -531,7 +531,7 @@ class Determinant:
         if not isinstance(matrix, Matrix):
             matrix = Matrix(matrix)
 
-        triangular_matrix = matrix.gaussian_elimination(matrix.matrix)
+        triangular_matrix = matrix.U_factor
         
         for i in range(len(triangular_matrix)):
             det *= triangular_matrix[i][i]

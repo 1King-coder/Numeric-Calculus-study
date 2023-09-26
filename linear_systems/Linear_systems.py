@@ -12,7 +12,8 @@ class Linear_System (Matrix):
         self.num_of_changed_lines = 0
 
         self.icognitos = [sym.symbols(f'x{i+1}') for i in range(self.rows_num)]
-        self.icognitos.append(1) # constant
+        if not self.isQuadratic:
+            self.icognitos.append(1) # constant
 
         self.system = linear_sys
 
@@ -67,10 +68,10 @@ class Linear_System (Matrix):
         # Takes the partialy escalonated by gaussian elimination 
         # (U factor of the system) and reverses it to solve it starting from the last
         # variable.
-        U_factor_with_icognitos = self.with_icognitos(self.U_factor)[::-1]
+        U_factor_with_icognitos = [sum(self.with_icognitos(self.U_factor)[i]) for i in range(self.rows_num)][::-1]
 
         # Reversed list of the icognitos
-        icognitos_to_solve = deepcopy(self.icognitos[::-1])
+        icognitos_to_solve = deepcopy(self.icognitos[len(self.icognitos) - 2::-1])
 
         # dictionary to make it possible and easier to use .subs from sympy
         # and store the results.
@@ -79,7 +80,6 @@ class Linear_System (Matrix):
         }
 
         for index, line in enumerate(U_factor_with_icognitos):
-
             # substitute the already solved variables values in the
             # line equation, making it only 1 icognito.
             line = line.subs(solved_icognitos)
@@ -89,7 +89,6 @@ class Linear_System (Matrix):
             res = sym.solve(line, icognitos_to_solve[index], rational=False)[0]
 
             # Round and store the results
-            print (res)
             solved_icognitos[icognitos_to_solve[index]] = res
 
         # Sorts the solutions
@@ -194,41 +193,62 @@ class Linear_System (Matrix):
     
     def gauss_scibel_method (self, TOL) -> list:
         iterations = []
+
+        has_no_coeff = False
+
+        for i in range(self.rows_num):
+            for j in range(self.cols_num - 1):
+                if not self.matrix[i][j]:
+                    has_no_coeff = True
         
         icognitos_values_dict = {
             self.icognitos[i]: 0 for i in range(self.rows_num)
         }
+        
+        icognitos_values_dict_0 = deepcopy(icognitos_values_dict)
 
         sol_vector_0 = Vector(*[0 for _ in range(self.rows_num)])
 
         for i in range(self.rows_num):
-            icognitos_values_dict[self.icognitos[i]] = round(self.fi_function[i].subs(icognitos_values_dict), 5)
-        
-        print(self.fi_function)
+            icognitos_values = icognitos_values_dict
+            
+            if has_no_coeff:
+                icognitos_values = icognitos_values_dict_0
+
+            icognitos_values_dict[self.icognitos[i]] = round(self.fi_function[i].subs(icognitos_values), 5)
+
 
         sol_vector_1 = Vector(*icognitos_values_dict.values())
 
-        iterations = [{'iter': 0, 'x0': sol_vector_0}, {'iter': 1, 'x1': sol_vector_1}]
+        iterations = [{'iter': 0, 'x(0)': sol_vector_0}, {'iter': 1, 'x(1)': sol_vector_1}]
         
         iteration = 1
 
-        while not (sol_vector_1 - sol_vector_0).module < TOL:
-            iteration += 1
+        dif_module = (sol_vector_1 - sol_vector_0).module
 
+        while not dif_module < TOL:
+            
+            iteration += 1
             sol_vector_0 = sol_vector_1
 
+            icognitos_values_dict_0 = deepcopy(icognitos_values_dict)
+
             for i in range(self.rows_num):
-                icognitos_values_dict[self.icognitos[i]] =round( self.fi_function[i].subs(icognitos_values_dict), 5)
+                icognitos_values = icognitos_values_dict
+                if has_no_coeff:
+                    icognitos_values = icognitos_values_dict_0
+
+                icognitos_values_dict[self.icognitos[i]] = round(self.fi_function[i].subs(icognitos_values), 5)
 
             sol_vector_1 = Vector(*icognitos_values_dict.values())
 
+            dif_module = (sol_vector_1 - sol_vector_0).module
+
             iterations.append({
                 'iter': iteration,
-                f'x{iteration}': Vector(*icognitos_values_dict.values())
-
+                f'x({iteration})': sol_vector_1,
+                f'||x({iteration}) - x({iteration-1})||':  round(dif_module, 5)
             })
-
-
 
         return iterations
 
@@ -272,6 +292,8 @@ if __name__ == '__main__':
     print(linear_system.Sassenfeld_crit)
     """
     print(*linear_system.gauss_scibel_method(10**(-1)), sep='\n')
+
+    linear_system.show_LU_decompotion()
 
 
     
