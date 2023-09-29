@@ -48,7 +48,6 @@ class Func:
 
         return (self.f(x1) - self.f(x0))/ (x1 - x0)
         
-
     def verify_derivate (self, a):
         # Verify if the derivate of the function in x=a is 0
         if self.dfunc == 0:
@@ -76,7 +75,8 @@ class Func:
         a, b, TOL = decimal(a), decimal(b), decimal(TOL)
 
         Max_iterations = ceil(
-            (decimal(log(b - a)) - decimal(log(TOL)))/decimal(log(2)))
+            (decimal(log(b - a)) - decimal(log(TOL)))/decimal(log(2))
+        )
 
         print(f'Num. Maximo de iterações: {Max_iterations}')
 
@@ -84,68 +84,39 @@ class Func:
             return False
         
         iteration = 0
-        x = decimal((a + b)/2)
-        iterations_x = []
-        iterations_y = []
-        iterations_list = [
-            {
-                'iter': iteration,
-                f'a{iteration}': a,
-                f'b{iteration}': b,
-                f'x{iteration}': x,
-                'f(x)': self.f(x),
-                'interval': b-a 
-            }
-        ]
-        
-
-        while iteration < Max_iterations:
+        iterations_list = []
+        while iteration < Max_iterations + 1:
 
             x = decimal((a + b)/2)
-
-            if self.f(x) == 0 or decimal((b-a)/2) < TOL:
-                if self.f(x)*self.f(a) < 0:
-                    b = x
-                else:
-                    a = x
-
-                
-                iteration += 1
-                iterations_x.append(x)
-                iterations_y.append(self.f(x))
-                iterations_list.append(
-                    {
-                        'iter': iteration,
-                        f'a{iteration}': a,
-                        f'b{iteration}': b,
-                        f'x{iteration}': x,
-                        'f(x)': self.f(x),
-                        'interval': b - a
-                    }
-                )
-                break
             
-            if self.f(x)*self.f(a) < 0:
-                b = x
-            else:
-                a = x
-
-            
-            iteration += 1
-            iterations_x.append(x)
-            iterations_y.append(self.f(x))
+            half_interval = decimal((b-a)/2)
             iterations_list.append(
                 {
                     'iter': iteration,
                     f'a{iteration}': a,
                     f'b{iteration}': b,
                     f'x{iteration}': x,
-                    'f(x)': self.f(x),
+                    f'f(x{iteration})': self.f(x),
                     'interval': b - a
                 }
             )
 
-            
+            if self.f(x)*self.f(a) < 0:
+                b = x
+            else:
+                a = x
+
+            iteration += 1
+
+            if self.f(x) == 0 or half_interval < TOL:                
+                if iteration < Max_iterations:
+                    iteration = Max_iterations - 1
+
+        # Add x and y elements for use when building graphics with matplot  
+        iterations_x, iterations_y = [], []                  
+        for i, element in enumerate(iterations_list):
+            iterations_x.append(element[f'x{i}'])
+            iterations_y.append(element[f'f(x{i})'])
 
         return {
             'result': x,
@@ -166,55 +137,54 @@ class Func:
 
         if not self.verify_derivate(a):
             return False
-        
+
+
+        # Initial set
         iteration = 0
-        x = a - self.f(a)/self.f(a, self.dfunc)
+        iterations_list = []
+        x = a
+        f_x = self.f(x)
         
-        
-        iter_x = []
-        iter_y = []
-        iterations = [
-            {
-                'iter': iteration,
-                f'x{iteration}': x,
-                'f(x)': self.f(x),
-                #f'(x)": self.f(a, self.dfunc)
-            }
-        ]
-        
-        while abs(self.f(x)) > TOL and iteration < 30:
-            iteration += 1
+        # Max iterations to avoid infinity iterations when the method can not converge
+        while abs(f_x) > TOL and iteration < 100:
+            
+            f_x = self.f(x)
+            df_x = self.f(x, self.dfunc)
 
-            if not self.verify_derivate(x):
-                print(x)
-                return False
+            x -= (f_x / df_x)
 
-            if self.f(x) == 0:
-                break
-
-            x -= self.f(x)/self.f(x, self.dfunc)
-
-            iter_x.append(x)
-            iter_y.append(self.f(x))
-            iterations.append(
+            iterations_list.append(
                 {
                     'iter': iteration,
                     f'x{iteration}': x,
-                    'f(x)': self.f(x),
-                    "f'(x)": self.f(x, self.dfunc)
+                    f'f(x{iteration})': f_x,
+                    f"f'(x{iteration})":df_x
                 }
             )
 
+            if not self.verify_derivate(x):
+                return False
+
+            iteration += 1
+
+            if self.f(x) == 0:
+                break
             
+        # x and y values for ploting graphics
+        iter_x, iter_y = [], []
+        
+        for i, element in enumerate(iterations_list):
+            iter_x.append(element[f'x{i}'])
+            iter_y.append(element[f'f(x{i})'])
 
         return {
             'result': x,
             'iter_x': iter_x,
             'iter_y': iter_y,
-            'iterations': iterations
+            'iterations': iterations_list
         }
     
-    def secant_method (self, interval:list, TOL: float):
+    def secant_method (self, a: float, b: float, TOL: float):
         """
         Uses the Newton's method to find the solution of the function 
         with TOL precision.
@@ -222,62 +192,63 @@ class Func:
         coordinates used in the method.
         """
 
-        x0, x1, TOL = decimal(interval[0]), decimal(interval[1]), decimal(TOL)
+        x0, x1, TOL = decimal(a), decimal(b), decimal(TOL)
 
-        if not self.secant_factor(x0, x1):
+        sec_factor = self.secant_factor(x0, x1)
+
+        if not sec_factor:
             return False
         
+
         iteration = 1
-        x2 = x1 - self.f(x1)/self.secant_factor(x0, x1)
-        iter_x = []
-        iter_y = []
-        iterations = [
-            {
-                'iter': iteration,
-                f'x{iteration}': x2,
-                'f(x)': self.f(x2),
-                "f'(x)": self.secant_factor(x0, x1),
-            },
-        ]
-        print(abs(self.f(x2)))
-        
-        while abs(self.f(x2)) > TOL and iteration < 15:
-            iteration += 1
+
+        f_x1 = self.f(x1)
+
+        iterations_list = []
+
+        while abs(self.f(x2)) > TOL and iteration < 100:
+
             if not self.secant_factor(x0, x1):
                 return False
 
-            if self.f(x2) == 0:
-                break
+            f_x1 = self.f(x1)
+            sec_factor = self.secant_factor(x0, x1)
 
-            x0 = x1
+            x2 = x1 - (f_x1 / sec_factor)
 
-            x1 = x2
-
-            x2 = x1 - self.f(x1)/self.secant_factor(x0, x1)
-
-            iter_x.append(x2)
-            iter_y.append(self.f(x2))
-            iterations.append(
+            iterations_list.append(
                 {
                     'iter': iteration,
                     f'x{iteration}': x2,
-                    'f(x)': self.f(x2),
-                    "f'(x)": self.secant_factor(x0, x1)
+                    f'f(x{iteration})': self.f(x2),
+                    f"secant factor ({iteration})": self.secant_factor(x0, x1)
                 }
             )
-
             
+            x0, x1 = x1, x2
+
+            iteration += 1
+            
+            if self.f(x2) == 0:
+                break
+        
+        # x and y values for ploting graphics
+        iter_x, iter_y = [], []
+        
+        for i, element in enumerate(iterations_list):
+            iter_x.append(element[f'x{i}'])
+            iter_y.append(element[f'f(x{i})'])
 
         return {
             'result': x2,
             'iter_x': iter_x,
             'iter_y': iter_y,
-            'iterations': iterations
+            'iterations': iterations_list
         }
         
     def fake_position_method (self, a: float, b: float, TOL: float) -> dict:
         """
-        Uses the bissection method to find the solution of the function
+        Uses the fake position method to find the solution of the function
         with TOL's precision.
         Returns a dictionary with the result and lists with the x and y
         coordinates used in the method.
@@ -286,70 +257,47 @@ class Func:
 
         if not self.verify_zero(a, b):
             return False
-        
+
+        # Expression used to obtain x_k in this method
+        fake_pos_expr = lambda a_k, b_k: decimal(
+            (self.f(b_k)*a_k - self.f(a_k)*b_k) /
+            (self.f(b_k) - self.f(a_k))
+        )
+
         iteration = 0
-        x = decimal((self.f(b)*a - self.f(a)*b)/(self.f(b) - self.f(a)))
-        iterations_x = []
-        iterations_y = []
-        iterations_list = [
-            {
-                'iter': iteration,
-                f'a{iteration}': a,
-                f'b{iteration}': b,
-                f'x{iteration}': x,
-                'f(x)': self.f(x),
-                'interval': b-a 
-            }
-        ]
+        iterations_list = []
+        x = fake_pos_expr(a, b)
         
-
-        while abs(self.f(x)) > TOL and iteration < 15:
-
-
-            if self.f(x) == 0 or abs(self.f(x)) < TOL:
-                if self.f(x)*self.f(a) < 0:
-                    b = x
-                else:
-                    a = x
-
-                
-                iteration += 1
-                iterations_x.append(x)
-                iterations_y.append(self.f(x))
-                iterations_list.append(
-                    {
-                        'iter': iteration,
-                        f'a{iteration}': a,
-                        f'b{iteration}': b,
-                        f'x{iteration}': x,
-                        'f(x)': self.f(x),
-                        'interval': b - a
-                    }
-                )
-                break
+        while abs(self.f(x)) > TOL and iteration < 100:
             
-            if self.f(x)*self.f(a) < 0:
-                b = x
-            else:
-                a = x
-
+            x = fake_pos_expr(a, b)
             
-            iteration += 1
-            x = decimal((self.f(b)*a - self.f(a)*b)/(self.f(b) - self.f(a)))
-            iterations_x.append(x)
-            iterations_y.append(self.f(x))
             iterations_list.append(
                 {
                     'iter': iteration,
                     f'a{iteration}': a,
                     f'b{iteration}': b,
                     f'x{iteration}': x,
-                    'f(x)': self.f(x),
+                    f'f(x{iteration})': self.f(x),
                     'interval': b - a
                 }
             )
 
-            
+            if self.f(x)*self.f(a) < 0:
+                b = x
+            else:
+                a = x
+
+            iteration += 1
+
+            if self.f(x) == 0:
+                break
+
+        # Add x and y elements for use when building graphics with matplot  
+        iterations_x, iterations_y = [], []                  
+        for i, element in enumerate(iterations_list):
+            iterations_x.append(element[f'x{i}'])
+            iterations_y.append(element[f'f(x{i})'])
 
         return {
             'result': x,
@@ -357,10 +305,6 @@ class Func:
             'iter_y': iterations_y,
             'iterations': iterations_list
         }
-        
-
-
-
 
 if __name__ == '__main__':
     # tests
@@ -372,7 +316,7 @@ if __name__ == '__main__':
         f, x
     )
     print(
-        *func.secant_method([-2, 0], 10**(-1))['iterations'], sep='\n'
+        *func.fake_position_method(-2, 0, 10**(-2))['iterations'], sep='\n'
     )
     ...
 

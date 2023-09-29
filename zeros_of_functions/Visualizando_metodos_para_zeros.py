@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 import numpy as np
-from calculando_zeros import Func
+from zeros_of_functions.Functions import Func
 import sympy as sym
 from math import sin, cos
 """
