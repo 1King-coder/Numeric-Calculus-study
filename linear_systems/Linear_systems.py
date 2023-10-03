@@ -5,30 +5,29 @@ import sympy as sym
 
 class Linear_System (Matrix):
 
-    def __init__ (self, linear_sys: list = []) -> None:
-        super().__init__ (linear_sys)
-
+    def __init__ (self, transform_matrix: list, b_vector: 'Vector', precision: int = 5) -> None:
+        super().__init__ (transform_matrix)
+        self.b_vector = b_vector
+        self.precision = precision
         
         self.num_of_changed_lines = 0
 
         self.icognitos = [sym.symbols(f'x{i+1}') for i in range(self.rows_num)]
-        if not self.isQuadratic:
-            self.icognitos.append(1) # constant
 
-        self.system = linear_sys
+        self.transform_matrix_with_icognitos = transform_matrix
 
     @property
-    def system (self) -> list:
-        return self.__system
+    def transform_matrix_with_icognitos (self) -> list:
+        return self.__transform_matrix_with_icognitos
     
-    @system.setter
-    def system (self, value) -> None:
+    @transform_matrix_with_icognitos.setter
+    def transform_matrix_with_icognitos (self, value) -> None:
         if isinstance(value[0], sym.core.add.Add):
             ...
-        self.__system = self.with_icognitos(value)
+        self.__transform_matrix_with_icognitos = self.with_icognitos(value)
 
-    def with_icognitos (self, system):
-        sys = deepcopy(system)
+    def with_icognitos (self, transform_matrix):
+        sys = deepcopy(transform_matrix)
 
         for j in range(self.rows_num):
             for index, icognito in enumerate(self.icognitos):
@@ -39,7 +38,7 @@ class Linear_System (Matrix):
         return sys
 
     def __repr__ (self) -> str:
-        lines_str = [f"l{index + 1} | {sum(self.__system[index])} = 0" for index in range(self.rows_num)]
+        lines_str = [f"l{index + 1} | {sum(self.transform_matrix_with_icognitos[index])} = {self.b_vector[index]}" for index in range(self.rows_num)]
         string = "\n".join(lines_str)
 
         return string + "\n"
@@ -68,10 +67,13 @@ class Linear_System (Matrix):
         # Takes the partialy escalonated by gaussian elimination 
         # (U factor of the system) and reverses it to solve it starting from the last
         # variable.
-        U_factor_with_icognitos = [sum(self.with_icognitos(self.U_factor)[i]) for i in range(self.rows_num)][::-1]
-
+        U_factor_with_icognitos = [
+            sum(self.with_icognitos(self.U_factor)[i]) - self.b_vector[i]
+            for i in range(self.rows_num)
+        ][::-1]
+        
         # Reversed list of the icognitos
-        icognitos_to_solve = deepcopy(self.icognitos[len(self.icognitos) - 2::-1])
+        icognitos_to_solve = deepcopy(self.icognitos[::-1])
 
         # dictionary to make it possible and easier to use .subs from sympy
         # and store the results.
@@ -114,9 +116,10 @@ class Linear_System (Matrix):
             if not self.matrix[i][i]:
                 raise InterruptedError("Can not create fi for matrices with 0 in its diagonal")
 
-        def fi_matrix_gen (i, j):
+        def fi_matrix_gen (i, j):          
             if not i == j:
-                return -self.matrix[i][j] / self.matrix[i][i] * self.icognitos[j]
+                term = -(round(self.matrix[i][j] / self.matrix[i][i], self.precision)) * self.icognitos[j]
+                return term
             
         fi_matrix = self.map_matrix (
             fi_matrix_gen,
@@ -124,7 +127,9 @@ class Linear_System (Matrix):
             self.cols_num
         )
 
-        fi_matrix = [sum(line) for line in fi_matrix]
+        b_vec_value = lambda i: round(self.b_vector[i] / self.matrix[i][i], 5)
+
+        fi_matrix = [sum(line) - b_vec_value(i) for i, line in enumerate(fi_matrix)]
 
         return fi_matrix
 
@@ -139,9 +144,9 @@ class Linear_System (Matrix):
         ]
         """
         fi_diff = self.map_matrix(
-            lambda i, j: self.fi_function[i].diff(self.icognitos[j]),
+            lambda i, j: round(self.fi_function[i].diff(self.icognitos[j]), self.precision),
             self.rows_num,
-            self.cols_num - 1
+            self.cols_num
         )
 
         return fi_diff
@@ -164,10 +169,11 @@ class Linear_System (Matrix):
         return alphas_dict
     
     @property
-    def senfeld_crit (self) -> dict:
+    def sassenfeld_crit (self) -> dict:
         """
         Convergence criterea for gauss-Sciedel linear system solving method.
-        if Beta < 1 the results will converge to a solution.
+        if Beta < 1 for all i, the results will converge to a solution.
+        βi = [Sum(|aij|*|βj|, from(j=1), to (i-1)) + sum(|aij|, from(i+1), to n)]/|aii|
         """
         betas_dict = {}
 
@@ -184,72 +190,98 @@ class Linear_System (Matrix):
                 if not beta:
                     beta = 1
 
-
-                beta_res += abs(self.matrix[i][j]) * abs(beta)
+                beta_res += abs(self.matrix[i][j] * beta)
 
             betas_dict[f'Beta({i + 1})'] = sym.Rational(beta_res, abs(self.matrix[i][i]))
 
         return betas_dict
     
-    def gauss_scibel_method (self, TOL) -> list:
-        iterations = []
-
+    def verify_if_have_coeff (self) -> bool:
+        """
+        Verify if there is an as coeff of any icognito.
+        """
         has_no_coeff = False
 
-        for i in range(self.rows_num):
-            for j in range(self.cols_num - 1):
-                if not self.matrix[i][j]:
-                    has_no_coeff = True
-        
-        print(has_no_coeff)
+        for line in self.matrix:
 
-        icognitos_values_dict = {
-            self.icognitos[i]: 0 for i in range(self.rows_num)
+            if 0 in line:
+                has_no_coeff = True
+                break
+
+        return has_no_coeff
+
+    def gauss_scibel_method (self, initial_vector: 'Vector', TOL) -> list:
+        iterations = []
+
+        there_is_zero = self.verify_if_have_coeff()
+
+        actual_icognitos_values = {
+            self.icognitos[i]: initial_vector[i] for i in range(self.rows_num)
         }
-        
-        icognitos_values_dict_0 = deepcopy(icognitos_values_dict)
+        # saves values as 0 if there is an 0 in the transform matrix
+        last_icognitos_values = deepcopy(actual_icognitos_values)
 
-        sol_vector_0 = Vector(*[0 for _ in range(self.rows_num)])
+        def calculate_icognitos_values (actual_icognitos_values: dict,
+                                        last_icognitos_values: dict,
+                                        there_is_zero: bool = there_is_zero) -> dict:
 
-        for i in range(self.rows_num):
-            icognitos_values = icognitos_values_dict
+            """
+            Function to update the icognitos values.
+            """
+
+            act_icog_vals = deepcopy(actual_icognitos_values)
+            last_icog_vals = deepcopy(last_icognitos_values)
+
+
+            # We can not use the last calculated value for a icognito if there is 
+            # one that has 0 as coeff
+            to_use_values = act_icog_vals if not there_is_zero else last_icog_vals
             
-            if has_no_coeff:
-                icognitos_values = icognitos_values_dict_0
+            solution_values = {}
+            for i in range(self.rows_num):
+                result = round(self.fi_function[i].subs(to_use_values), self.precision)
+                
+                # real-time updating icognitos values if there is no zero in the coefficients
+                act_icog_vals[self.icognitos[i]] = result
+                solution_values[self.icognitos[i]] = result
 
-            icognitos_values_dict[self.icognitos[i]] = round(self.fi_function[i].subs(icognitos_values), 5)
+            return solution_values
 
+        """
+        very first iterations ( setting iteration )
+        """
+        actual_icognitos_values = calculate_icognitos_values(actual_icognitos_values, last_icognitos_values)
 
-        sol_vector_1 = Vector(*icognitos_values_dict.values())
+        sol_vector = Vector(*actual_icognitos_values.values())
 
-        iterations = [{'iter': 0, 'x(0)': sol_vector_0}, {'iter': 1, 'x(1)': sol_vector_1}]
+        last_vector = initial_vector
+
+        iterations = [{'iter': 0, 'x(0)': last_vector}, {'iter': 1, 'x(1)': sol_vector}]
         
         iteration = 1
 
-        dif_module = (sol_vector_1 - sol_vector_0).module
+        dif_module = (sol_vector - last_vector).module
 
-        while not dif_module < TOL:
+        while dif_module > TOL:
             
             iteration += 1
-            sol_vector_0 = sol_vector_1
+            
+            # Update the system
+            last_vector = deepcopy(sol_vector)
 
-            icognitos_values_dict_0 = deepcopy(icognitos_values_dict)
+            # Update the icognitos values
+            last_icognitos_values = deepcopy(actual_icognitos_values)
+            actual_icognitos_values = calculate_icognitos_values(actual_icognitos_values, last_icognitos_values)
+            
+            # Update solution values.
+            sol_vector = Vector(*actual_icognitos_values.values())
 
-            for i in range(self.rows_num):
-                icognitos_values = icognitos_values_dict
-                if has_no_coeff:
-                    icognitos_values = icognitos_values_dict_0
-
-                icognitos_values_dict[self.icognitos[i]] = round(self.fi_function[i].subs(icognitos_values), 5)
-
-            sol_vector_1 = Vector(*icognitos_values_dict.values())
-
-            dif_module = (sol_vector_1 - sol_vector_0).module
+            dif_module = (sol_vector - last_vector).module
 
             iterations.append({
                 'iter': iteration,
-                f'x({iteration})': sol_vector_1,
-                f'||x({iteration}) - x({iteration-1})||':  round(dif_module, 5)
+                f'x({iteration})': sol_vector,
+                f'||x({iteration}) - x({iteration-1})||':  round(dif_module, self.precision)
             })
 
         return iterations
@@ -262,43 +294,41 @@ class Linear_System (Matrix):
 if __name__ == '__main__':
 
     sys_1 = [
-        [2, 3, 1, -4, 0],
-        [-3, 1, 1, 2, -4],
-        [-1, 0, 1, -1, -2],
-        [1, 1, -3, 0, 2],
+        [2, 3, 1, -4],
+        [-3, 1, 1, 2],
+        [-1, 0, 1, -1],
+        [1, 1, -3, 0],
     ]
+
+    b_vec_1 = Vector(0, 4, 2, -2)
 
     sys_2 = [
-        [2, -1, 1, 0, -1],
-        [0, 3, 1, 2, -1],
-        [-1, 0, 3, -1, 5],
-        [1, 0, -3, 2, -6],
+        [2, -1, 1, 0],
+        [0, 3, 1, 2],
+        [-1, 0, 3, -1],
+        [1, 0, -3, 2],
     ]
 
+    b_vec_2 = Vector(1, 1, -5, 6)
+
     sys_3 = [
-        [4, -1, 1, -1, -3],
-        [2, 4, -1, 1, -3],
-        [-1, 2, 3, -1, 0],
-        [1, -1, -2, -3, 2],
+        [4, -1, 1, -1],
+        [2, 4, -1, 1],
+        [-1, 2, 3, -1],
+        [1, -1, -2, -3],
     ]
+
+    b_vec_3 = Vector(3, 3, 0, -2)
 
     sys_4 = [
         [2, 3, -1, 0]
     ]
 
     
-    linear_system = Linear_System(sys_4)
-    """
-    fi_func = linear_system.fi_function
-    fi_diff = linear_system.fi_diff
-    alpha_dict = linear_system.converge_crit_alpha
-
-    print(*fi_func, sep='\n')
-    print(Matrix(fi_diff))
-    print(linear_system.senfeld_crit)
-    """
-    print(*linear_system.gauss_scibel_method(10**(-1)), sep='\n')
-
+    linear_system = Linear_System(sys_2, b_vec_2)
+    
+    print(*linear_system.gauss_scibel_method(Vector(0,0,0,0), 10**(-1)), sep='\n')
+    
     
 
 

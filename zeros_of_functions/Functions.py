@@ -44,11 +44,11 @@ class Func:
         # Derivates a given function
         return function.diff()
     
-    def secant_factor (self, x0: 'Decimal', x1: 'Decimal'):
+    def secant_factor (self, x0: 'Decimal', x1: 'Decimal') -> float:
 
         return (self.f(x1) - self.f(x0))/ (x1 - x0)
         
-    def verify_derivate (self, a):
+    def verify_derivate (self, a) -> bool:
         # Verify if the derivate of the function in x=a is 0
         if self.dfunc == 0:
             print('Derivative = 0')
@@ -203,6 +203,7 @@ class Func:
         iteration = 1
 
         f_x1 = self.f(x1)
+        x2 = x1 - (f_x1 / sec_factor)
 
         iterations_list = []
 
@@ -236,8 +237,8 @@ class Func:
         iter_x, iter_y = [], []
         
         for i, element in enumerate(iterations_list):
-            iter_x.append(element[f'x{i}'])
-            iter_y.append(element[f'f(x{i})'])
+            iter_x.append(element[f'x{i+1}'])
+            iter_y.append(element[f'f(x{i+1})'])
 
         return {
             'result': x2,
@@ -315,8 +316,9 @@ if __name__ == '__main__':
     func = Func(
         f, x
     )
+    
     print(
-        *func.fake_position_method(-2, 0, 10**(-2))['iterations'], sep='\n'
+        *func.secant_method(-2, 0, 10**(-2))['iterations'], sep='\n'
     )
     ...
 
