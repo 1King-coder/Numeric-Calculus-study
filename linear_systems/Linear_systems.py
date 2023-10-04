@@ -72,7 +72,7 @@ class Linear_System (Matrix):
                 string = "\n".join(lines_str)
                 print(f"{key[9:]}:\n{string}")
     
-    def solve_by_gauss_elimination (self, is_using_LU: bool = False) -> Vector:
+    def gauss_elimination_method (self, is_using_LU: bool = False) -> Vector:
         """
         Function that utilizes the gaussian elimination method
         to triangulate the system and solve it
@@ -368,7 +368,7 @@ if __name__ == '__main__':
 
     lin_sys = Linear_System(L_factor.matrix, Vector(*[i[0] for i in Pb.matrix]))
     
-    print(lin_sys.solve_by_gauss_elimination(True).column_matrix, sep='\n')
+    print(lin_sys.gauss_elimination_method(is_using_LU=True).column_matrix, sep='\n')
     
 
 
