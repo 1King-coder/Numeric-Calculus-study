@@ -124,7 +124,7 @@ class Vector (list):
         if isinstance(other_vector, Vector):
             return self.scalar(other_vector)
         
-        return Vector(*[round(entry*other_vector, 6) for entry in self.entrys])
+        return Vector(*[entry*other_vector for entry in self.entrys])
     
     def __lt__(self, other_vector: 'Vector') -> bool:
         """
@@ -145,7 +145,7 @@ class Vector (list):
         if self.dimension != other_vector.dimension:
             raise ArithmeticError('Can not sum different dimensions vectors!')
         
-        return Vector(*[round(self.entrys[i] + other_vector.entrys[i], 6) for i in range(len(self.entrys))])
+        return Vector(*[self.entrys[i] + other_vector.entrys[i] for i in range(len(self.entrys))])
     
     def __sub__ (self, other_vector: 'Vector') -> 'Vector':
         """
@@ -154,7 +154,7 @@ class Vector (list):
         if self.dimension != other_vector.dimension:
             raise ArithmeticError('Can not sum different dimensions vectors!')
         
-        return Vector(*[round(self.entrys[i] - other_vector.entrys[i], 6) for i in range(len(self.entrys))])
+        return Vector(*[self.entrys[i] - other_vector.entrys[i] for i in range(len(self.entrys))])
     
     
     def __round__ (self, decimals: int):
