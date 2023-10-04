@@ -6,13 +6,20 @@ import sympy as sym
 class Linear_System (Matrix):
 
     def __init__ (self, transform_matrix: list, b_vector: 'Vector', precision: int = 5) -> None:
+        
+        self.rows_num = len(transform_matrix)
+        self.cols_num = len(transform_matrix[0])
+        self.icognitos = [sym.symbols(f'x{i+1}') for i in range(self.rows_num)]
+        
+        if self.rows_num != self.cols_num:
+            transform_matrix = self.expression_to_matrix(transform_matrix)
+
         super().__init__ (transform_matrix)
+
         self.b_vector = b_vector
         self.precision = precision
         
         self.num_of_changed_lines = 0
-
-        self.icognitos = [sym.symbols(f'x{i+1}') for i in range(self.rows_num)]
 
         self.transform_matrix_with_icognitos = transform_matrix
 
@@ -26,14 +33,21 @@ class Linear_System (Matrix):
             ...
         self.__transform_matrix_with_icognitos = self.with_icognitos(value)
 
+    def expression_to_matrix (self, transform_matrix):
+        
+        return self.map_matrix(
+            lambda i, j: transform_matrix[i][0].coeff(self.icognitos[j]),
+            self.rows_num,
+            self.rows_num,
+        )
+        ...
+
     def with_icognitos (self, transform_matrix):
         sys = deepcopy(transform_matrix)
 
         for j in range(self.rows_num):
             for index, icognito in enumerate(self.icognitos):
                 sys[j][index] *= icognito
-
-            #sys[j] = sum(sys[j])
 
         return sys
 
@@ -58,22 +72,33 @@ class Linear_System (Matrix):
                 string = "\n".join(lines_str)
                 print(f"{key[9:]}:\n{string}")
     
-    def solve_by_gauss_elimination (self) -> Vector:
+    def solve_by_gauss_elimination (self, is_using_LU: bool = False) -> Vector:
         """
         Function that utilizes the gaussian elimination method
         to triangulate the system and solve it
         """
 
+        # If you are using the solving by LU composition method
+        # (Ax = b -> LUx = Pb -> y = Ux -> Ly = Pb then Ux = y where x is the solution) 
+        # You need to send the factor from the original transform matrix A
+        to_use_factor = self.U_factor if not is_using_LU else self.matrix
+
         # Takes the partialy escalonated by gaussian elimination 
         # (U factor of the system) and reverses it to solve it starting from the last
         # variable.
+    
+
         U_factor_with_icognitos = [
-            sum(self.with_icognitos(self.U_factor)[i]) - self.b_vector[i]
+            sum(self.with_icognitos(to_use_factor)[i]) - self.b_vector[i]
             for i in range(self.rows_num)
         ][::-1]
         
         # Reversed list of the icognitos
-        icognitos_to_solve = deepcopy(self.icognitos[::-1])
+        icognitos_to_solve = deepcopy(self.icognitos)[::-1]
+
+        if is_using_LU:
+            U_factor_with_icognitos.reverse()
+            icognitos_to_solve.reverse()
 
         # dictionary to make it possible and easier to use .subs from sympy
         # and store the results.
@@ -90,12 +115,20 @@ class Linear_System (Matrix):
             # line equation and solve it for equation = 0
             res = sym.solve(line, icognitos_to_solve[index], rational=False)[0]
 
+            print(solved_icognitos)
+
             # Round and store the results
             solved_icognitos[icognitos_to_solve[index]] = res
 
         # Sorts the solutions
+        solved_icog_list = list(solved_icognitos.items())
+
+        if is_using_LU: solved_icog_list.reverse()
+
         solved_icognitos = {
-            icognito: solution for icognito, solution in list(solved_icognitos.items())[::-1]
+            icognito: solution 
+            for icognito, solution in 
+            solved_icog_list
         }
 
         return Vector(*solved_icognitos.values())
@@ -286,11 +319,6 @@ class Linear_System (Matrix):
 
         return iterations
 
-
-
-
-    
-        
 if __name__ == '__main__':
 
     sys_1 = [
@@ -321,14 +349,26 @@ if __name__ == '__main__':
     b_vec_3 = Vector(3, 3, 0, -2)
 
     sys_4 = [
-        [2, 3, -1, 0]
+        [ 2,  3, -1,  0],
+        [ 3,  1,  1, -1],
+        [ 4,  2,  1,  2],
+        [-2,  0,  1,  1],
     ]
+    b_vec_4 = Vector(-1, 1, 4, -1).column_matrix
 
     
-    linear_system = Linear_System(sys_2, b_vec_2)
+    transform_matrix = Matrix(sys_4)
     
-    print(*linear_system.gauss_scibel_method(Vector(0,0,0,0), 10**(-1)), sep='\n')
+    U_factor = Matrix(transform_matrix.U_factor)
+    L_factor = Matrix(transform_matrix.L_factor)
+    P_factor = Matrix(transform_matrix.P_factor)
+    A_factor = Matrix(transform_matrix.A_factor)
+
+    Pb = P_factor * b_vec_4
+
+    lin_sys = Linear_System(L_factor.matrix, Vector(*[i[0] for i in Pb.matrix]))
     
+    print(lin_sys.solve_by_gauss_elimination(True).column_matrix, sep='\n')
     
 
 
