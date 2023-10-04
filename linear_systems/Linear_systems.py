@@ -369,10 +369,3 @@ if __name__ == '__main__':
     lin_sys = Linear_System(L_factor.matrix, Vector(*[i[0] for i in Pb.matrix]))
     
     print(lin_sys.gauss_elimination_method(is_using_LU=True).column_matrix, sep='\n')
-    
-
-
-    
-
-
-
