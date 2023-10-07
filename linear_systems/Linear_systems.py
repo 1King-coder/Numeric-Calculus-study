@@ -18,7 +18,7 @@ class Linear_System (Matrix):
 
         self.b_vector = b_vector
         self.precision = precision
-        
+        self.ampli_matrix = self.amplified_matrix()
         self.num_of_changed_lines = 0
 
         self.transform_matrix_with_icognitos = transform_matrix
@@ -71,6 +71,13 @@ class Linear_System (Matrix):
 
                 string = "\n".join(lines_str)
                 print(f"{key[9:]}:\n{string}")
+
+    def amplified_matrix (self) -> list:
+        return self.map_matrix (
+            lambda i, j: self.matrix[i][j] if j != self.cols_num else -1 * self.b_vector[i],
+            self.rows_num,
+            self.cols_num + 1
+        )
     
     def gauss_elimination_method (self, is_using_LU: bool = False) -> Vector:
         """
@@ -78,18 +85,11 @@ class Linear_System (Matrix):
         to triangulate the system and solve it
         """
 
-        # If you are using the solving by LU composition method
-        # (Ax = b -> LUx = Pb -> y = Ux -> Ly = Pb then Ux = y where x is the solution) 
-        # You need to send the factor from the original transform matrix A
-        to_use_factor = self.U_factor if not is_using_LU else self.matrix
-
-        # Takes the partialy escalonated by gaussian elimination 
-        # (U factor of the system) and reverses it to solve it starting from the last
-        # variable.
-    
-
-        U_factor_with_icognitos = [
-            sum(self.with_icognitos(to_use_factor)[i]) - self.b_vector[i]
+        upper_triangular_matrix = self.gaussian_elimination(self.ampli_matrix)
+        
+        # utm stands for upper triangular matrix
+        utm_factor_with_icognitos = [
+            sum(self.with_icognitos(upper_triangular_matrix)[i])
             for i in range(self.rows_num)
         ][::-1]
         
@@ -97,7 +97,7 @@ class Linear_System (Matrix):
         icognitos_to_solve = deepcopy(self.icognitos)[::-1]
 
         if is_using_LU:
-            U_factor_with_icognitos.reverse()
+            utm_factor_with_icognitos.reverse()
             icognitos_to_solve.reverse()
 
         # dictionary to make it possible and easier to use .subs from sympy
@@ -106,16 +106,14 @@ class Linear_System (Matrix):
             icognito: icognito for icognito in icognitos_to_solve
         }
 
-        for index, line in enumerate(U_factor_with_icognitos):
+        for index, line in enumerate(utm_factor_with_icognitos):
             # substitute the already solved variables values in the
             # line equation, making it only 1 icognito.
             line = line.subs(solved_icognitos)
 
             # takes the result by using sym.solve, where it takes the
             # line equation and solve it for equation = 0
-            res = sym.solve(line, icognitos_to_solve[index], rational=False)[0]
-
-            print(solved_icognitos)
+            res = sym.solve(line, icognitos_to_solve[index])[0]
 
             # Round and store the results
             solved_icognitos[icognitos_to_solve[index]] = res
@@ -123,7 +121,8 @@ class Linear_System (Matrix):
         # Sorts the solutions
         solved_icog_list = list(solved_icognitos.items())
 
-        if is_using_LU: solved_icog_list.reverse()
+        if not is_using_LU: 
+            solved_icog_list.reverse()
 
         solved_icognitos = {
             icognito: solution 
@@ -223,9 +222,13 @@ class Linear_System (Matrix):
                 if not beta:
                     beta = 1
 
+                
+
                 beta_res += abs(self.matrix[i][j] * beta)
 
-            betas_dict[f'Beta({i + 1})'] = sym.Rational(beta_res, abs(self.matrix[i][i]))
+            
+
+            betas_dict[f'Beta({i + 1})'] = beta_res/abs(self.matrix[i][i])
 
         return betas_dict
     
@@ -242,6 +245,17 @@ class Linear_System (Matrix):
                 break
 
         return has_no_coeff
+    
+    def gauss_sciebel_will_converge (self) -> bool:
+        """
+        Verify if all betas is < 1, if one of them is >= 1, it is not guaranteed 
+        that the method will converge.
+        """
+        sassenfeld_crits = [beta < 1 for beta in self.sassenfeld_crit.values()]
+
+        will_converge = False in sassenfeld_crits
+
+        return not will_converge
 
     def gauss_scibel_method (self, initial_vector: 'Vector', TOL) -> list:
         iterations = []
@@ -253,6 +267,8 @@ class Linear_System (Matrix):
         }
         # saves values as 0 if there is an 0 in the transform matrix
         last_icognitos_values = deepcopy(actual_icognitos_values)
+
+        
 
         def calculate_icognitos_values (actual_icognitos_values: dict,
                                         last_icognitos_values: dict,
@@ -279,7 +295,12 @@ class Linear_System (Matrix):
                 solution_values[self.icognitos[i]] = result
 
             return solution_values
+        
+        max_iterations = 9999999999
 
+        if not self.gauss_sciebel_will_converge():
+            print ("This method is not guaranteed to converge.")
+            max_iterations = 100
         """
         very first iterations ( setting iteration )
         """
@@ -289,13 +310,18 @@ class Linear_System (Matrix):
 
         last_vector = initial_vector
 
-        iterations = [{'iter': 0, 'x(0)': last_vector}, {'iter': 1, 'x(1)': sol_vector}]
-        
-        iteration = 1
-
         dif_module = (sol_vector - last_vector).module
 
-        while dif_module > TOL:
+        
+        iteration = 1
+        iterations = [
+            {'iter': 0, 'x(0)': last_vector},
+            {'iter': 1, 'x(1)': sol_vector, 
+            f'||x({iteration}) - x({iteration-1})||':  round(dif_module, self.precision)}
+            ]
+
+
+        while dif_module > TOL and iteration < max_iterations:
             
             iteration += 1
             
@@ -316,19 +342,19 @@ class Linear_System (Matrix):
                 f'x({iteration})': sol_vector,
                 f'||x({iteration}) - x({iteration-1})||':  round(dif_module, self.precision)
             })
+    
 
         return iterations
 
 if __name__ == '__main__':
 
     sys_1 = [
-        [2, 3, 1, -4],
-        [-3, 1, 1, 2],
-        [-1, 0, 1, -1],
-        [1, 1, -3, 0],
+        [2, 1, -1],
+        [-1, 1, 1],
+        [1, 3,- 1],
     ]
 
-    b_vec_1 = Vector(0, 4, 2, -2)
+    b_vec_1 = Vector(4, 0, 8)
 
     sys_2 = [
         [2, -1, 1, 0],
@@ -340,13 +366,13 @@ if __name__ == '__main__':
     b_vec_2 = Vector(1, 1, -5, 6)
 
     sys_3 = [
-        [4, -1, 1, -1],
-        [2, 4, -1, 1],
-        [-1, 2, 3, -1],
-        [1, -1, -2, -3],
+        [2, 1, 1, 0],
+        [4, 3, 3, 1],
+        [8, 7, 9, 5],
+        [6, 7, 9, 8],
     ]
 
-    b_vec_3 = Vector(3, 3, 0, -2)
+    b_vec_3 = Vector(1, 2, 4, 5)
 
     sys_4 = [
         [ 2,  3, -1,  0],
@@ -354,18 +380,11 @@ if __name__ == '__main__':
         [ 4,  2,  1,  2],
         [-2,  0,  1,  1],
     ]
-    b_vec_4 = Vector(-1, 1, 4, -1).column_matrix
+    b_vec_4 = Vector(-1, 1, 4, -1)
 
-    
-    transform_matrix = Matrix(sys_4)
-    
-    U_factor = Matrix(transform_matrix.U_factor)
-    L_factor = Matrix(transform_matrix.L_factor)
-    P_factor = Matrix(transform_matrix.P_factor)
-    A_factor = Matrix(transform_matrix.A_factor)
 
-    Pb = P_factor * b_vec_4
 
-    lin_sys = Linear_System(L_factor.matrix, Vector(*[i[0] for i in Pb.matrix]))
+
+    lin_sys = Linear_System(sys_4, b_vec_4)
     
-    print(lin_sys.gauss_elimination_method(is_using_LU=True).column_matrix, sep='\n')
+    print(lin_sys.gauss_elimination_method(), sep='\n')
