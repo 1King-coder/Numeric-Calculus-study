@@ -2,6 +2,7 @@ from Matrix import Matrix
 import math
 from typing import Any
 import sympy as sym
+from copy import deepcopy
 
 i, j, k = sym.symbols('i j k')
 
@@ -117,14 +118,25 @@ class Vector (list):
         teta = math.acos((self * other_vector) / (self.module * other_vector.module))
         return round(math.degrees(teta), 2)
 
-    def __mul__ (self, other_vector: 'Vector') -> float or 'Vector':
+    def __mul__ (self, other_vector: 'Vector' or float or 'sym.Symbol') -> float or 'Vector':
         """
         Interpretate multiplication as a scalar product.
         """
         if isinstance(other_vector, Vector):
             return self.scalar(other_vector)
         
-        return Vector(*[entry*other_vector for entry in self.entrys])
+        return Vector(*[entry * other_vector for entry in self.entrys])
+    
+    
+    
+    def __truediv__ (self, num: float) -> float or 'Vector':
+        """
+        Interpretate multiplication as a scalar product.
+        """
+        if isinstance(num, Vector):
+            raise ArithmeticError('Can not divide one vector by other')
+        
+        return Vector(*[entry / num for entry in deepcopy(self.entrys)])
     
     def __lt__(self, other_vector: 'Vector') -> bool:
         """
