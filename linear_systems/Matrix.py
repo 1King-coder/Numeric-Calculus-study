@@ -52,7 +52,7 @@ class Matrix:
     @matrix.setter
     def matrix (self, value):
         if isinstance(value, tuple):
-            value = Matrix.gen_matrix(value[0], value[1]).matrix
+            value = Matrix.gen_matrix(value[0], value[1])
             
         self.__matrix: Union[list, None] = value
 
@@ -369,6 +369,7 @@ class Matrix:
         return cofactor
 
     def order_lines (self, matrix: list, to_order_matrices: list = [] , index: int = 0):
+        
         to_be_sorted = deepcopy(matrix)[index:]
         sorted_matrix = sorted(
             to_be_sorted,
@@ -393,6 +394,7 @@ class Matrix:
         given matrix.
         returns the partialy escalonated matrix (triangular matrix).
         """
+        counter = 0
         if self.isRow or self.isColumn:
             return None
 
@@ -402,13 +404,14 @@ class Matrix:
         self.gauss_iterations = []
         
         for i in range(cols_num):
-            self.order_lines(escalonated_matrix, [self.P_factor, self.A_factor, self.L_factor], i)
-
+            if counter != self.rows_num:
+                self.order_lines(escalonated_matrix, [self.P_factor, self.A_factor, self.L_factor], i)
+                
             for j in range(i + 1, rows_num):
-                multiplier = sym.Rational(escalonated_matrix[j][i], escalonated_matrix[i][i])
+                multiplier =  - sym.Rational(escalonated_matrix[j][i], escalonated_matrix[i][i])
                 
                 escalonated_matrix[j] = [
-                    escalonated_matrix[j][k] - escalonated_matrix[i][k]*multiplier
+                    escalonated_matrix[j][k] + escalonated_matrix[i][k]*multiplier
                     for k in range(cols_num)
                 ]
                 self.gauss_iterations.append(
@@ -420,7 +423,9 @@ class Matrix:
                     }
                 )
 
-                self.L_factor[j][i] = multiplier            
+                self.L_factor[j][i] = multiplier
+                
+            counter += 1            
 
         self.L_factor = self.L_factor # To ensure there is the 1's in de main diagonal
         
@@ -588,12 +593,23 @@ if __name__ == "__main__":
         [1, 1, -3, 0, -2],
     ]
 
+    points = [
+        (0, 1),
+        (1, 6),
+        (2, 5),
+        (3, -8),
+    ]
+
+    A = Matrix((4, 4))
+
+    vandermond = A.map_matrix(
+        lambda i, j: points[i][0]**j,
+        4,
+        4
+    )
 
 
-    A = Matrix(matrix_a)
-
-
-    print(*A.gauss_iterations, sep='\n')
+    print(vandermond, sep='\n')
     
     
     
