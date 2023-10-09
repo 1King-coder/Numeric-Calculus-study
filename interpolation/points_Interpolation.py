@@ -24,9 +24,9 @@ class Interpolate:
         self.points = points
         self.num_of_points = len(points)
 
-        self.lagrangian_iterations = []
-        self.vandermond_iterations = []
-        self.newton_iterations = []
+        self.lagrange_iterations = list()
+        self.vandermond_iterations = dict()
+        self.newton_iterations = list()
 
     @property
     def x_values (self) -> float:
@@ -69,6 +69,9 @@ class Interpolate:
             self.vandermond_x_matrix,
             Vector(*self.y_values)
         )
+
+        self.vandermond_iterations['lin_sys'] = vandermond_sys
+        
         
         # Uses gaussian elimination method to solve the system and obtain the
         # coefficients
@@ -90,11 +93,17 @@ class Interpolate:
 
         for j in range(self.num_of_points):
             if index != j:
-                polynomial *= (x - self.x_values[j]) / (self.x_values[index] - self.x_values[j])
+                # Here I have separeted the fraction by a multiplication to make
+                # sure it is not evaluated and store the (x - xj) / (xi - xj) form. 
+                polynomial *= sym.Mul(
+                    (x - self.x_values[j]), # (x - xj)
+                    sym.Rational(1 , (self.x_values[index] - self.x_values[j])), # 1 / (xi - xj)
+                    evaluate=False # ensure the form and do not create any fraction inside (x - xj)
+                )
+
+        self.lagrange_iterations[index][f'L{index}(x{index})'] = polynomial
 
         return sym.expand(polynomial)
-        ...
-
 
     def lagrange_method (self):
         """
@@ -102,8 +111,10 @@ class Interpolate:
         Pn(x) = Σ(yi*Li(xi)) from i to n, where n is the number of points given.
         """
         inter_polynomial = 0
-        
         for i in range(self.num_of_points):
+            
+            self.lagrange_iterations.append({'iter': i})
+
             inter_polynomial += self.y_values[i] * self.lagrangian_coeff(i)
         
         return inter_polynomial
@@ -119,4 +130,7 @@ if __name__ == '__main__':
     ])
 
     print (inter.lagrange_method(), sep="\n")
+    print (*inter.lagrange_iterations, sep="\n")
 
+    print (inter.vandermond_method(), sep="\n")
+    print (*inter.vandermond_iterations, sep="\n")
