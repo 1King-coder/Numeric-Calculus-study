@@ -189,7 +189,7 @@ class Matrix:
             columns
         )
 
-    def __repr__(self) -> str:
+    def __repr__ (self) -> str:
         """
         Pretty print a Matrix.
         """
@@ -211,6 +211,10 @@ class Matrix:
             matrix_str += '|\n'
 
         return matrix_str
+    
+    def __str__ (self) -> str:
+        # Return the pretty print form as string
+        return self.__repr__()
     
     def __add__(self, other_matrix: 'Matrix') -> 'Matrix':
 

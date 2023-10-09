@@ -29,8 +29,8 @@ class Linear_System (Matrix):
     
     @transform_matrix_with_icognitos.setter
     def transform_matrix_with_icognitos (self, value) -> None:
-        if isinstance(value[0], sym.core.add.Add):
-            ...
+        # if isinstance(value[0], sym.core.add.Add):
+            # ...
         self.__transform_matrix_with_icognitos = self.with_icognitos(value)
 
     def expression_to_matrix (self, transform_matrix):
@@ -40,7 +40,6 @@ class Linear_System (Matrix):
             self.rows_num,
             self.rows_num,
         )
-        ...
 
     def with_icognitos (self, transform_matrix):
         sys = deepcopy(transform_matrix)
