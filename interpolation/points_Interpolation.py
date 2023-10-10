@@ -1,22 +1,37 @@
 import sys
 
-sys.path.append('.\\linear_systems\\')
+is_main = __name__ == "__main__"
+
+lin_sys_path = '.\\linear_systems\\' if is_main else '..\\linear_systems\\'
+function_path = '.\\zeros_of_functions\\' if is_main else '..\\zeros_of_functions\\'
+
+sys.path.append(lin_sys_path)
+sys.path.append(function_path)
 
 from Vectors import Vector
 from Matrix import Matrix
 from Linear_systems import Linear_System
+from Functions import Func
 import sympy as sym
 from copy import deepcopy
+from decimal import Decimal, getcontext
 
-global x
+getcontext().prec = 2
 
-x = sym.symbols('x')
 
-memory = {}
+
+x = sym.symbols('x') # x icognito to build expressions
+
+memory = {} # external variable
+
 def memoization (key: str = '', value = None, clear: bool = False):
+    """
+    Memoization function that uses external global variable to store useful data
+    temporaly.
+    """
     if clear:
         memory.clear()
-        return print('Memory successfuly cleared.')
+        return
     
     if key in memory:
         return memory[key]
@@ -55,19 +70,19 @@ class Interpolate:
     def vandermond_x_matrix (self) -> 'Matrix':
         # Build vandermond matrix with the x coordinates
         return Matrix.map_matrix(
-            lambda i, j: self.x_values[i]**j,
+            lambda i, j: float(self.x_values[i])**j,
             self.num_of_points,
             self.num_of_points,
         )
 
-    def build_interpolation_function (self, coefficients: list) -> 'sym.core.Add':
+    def build_interpolation_function (self, coefficients: list) -> 'Func':
         # This function builds the interpolation function witgh the given coefficients
         func = 0
 
         for degree, coeff in enumerate(coefficients):
             func += coeff * x **degree
         
-        return func
+        return Func(func, x)
     
     def vandermond_method (self) -> 'sym.core.Add':
         """
@@ -108,7 +123,7 @@ class Interpolate:
                 # sure it is not evaluated and store the (x - xj) / (xi - xj) form. 
                 polynomial *= sym.Mul(
                     (x - self.x_values[j]), # (x - xj)
-                    sym.Rational(1 , (self.x_values[index] - self.x_values[j])), # 1 / (xi - xj)
+                    sym.Rational(1 , (float(self.x_values[index]) - float(self.x_values[j]))), # 1 / (xi - xj)
                     evaluate=False # ensure the form and do not create any fraction inside (x - xj)
                 )
 
@@ -116,7 +131,7 @@ class Interpolate:
 
         return sym.expand(polynomial)
 
-    def lagrange_method (self):
+    def lagrange_method (self) -> Func:
         """
         Lagrange method to build a interpolation polynomial in the form:
         Pn(x) = Σ(yi*Li(xi)) from i to n, where n is the number of points given.
@@ -128,7 +143,7 @@ class Interpolate:
 
             inter_polynomial += self.y_values[i] * self.lagrangian_coeff(i)
         
-        return inter_polynomial
+        return Func(inter_polynomial, x)
 
     def newton_operator (self, x_coordinates: list):
         """
@@ -159,7 +174,7 @@ class Interpolate:
             (x_coordinates[num_of_points - 1] - x_coordinates[0]) # (xn - xi)
         )
         
-    def newton_method (self):
+    def newton_method (self) -> 'Func':
         """
         Newton's method of building an interpolation polynominal function Pn(x).
         Pn(x) = f[x0] + f[x0;x1]*(x - x0) + f[x0;x1;x2]*(x - x0)*(x - x1) ... f[x0;...;xn]*...*(x - xn-1)
@@ -186,11 +201,11 @@ class Interpolate:
         # Clear memory after usage
         memoization(clear=True)
         
-        return inter_polynomial
+        return Func(inter_polynomial, x)
 
     
 
-if __name__ == '__main__':
+if is_main:
     inter = Interpolate([
         (0, 1),
         (1, 6),

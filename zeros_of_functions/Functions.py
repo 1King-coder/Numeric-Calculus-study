@@ -29,6 +29,12 @@ class Func:
 
         return (function if function else self.func).subs({self.x: value})
     
+    def __str__ (self) -> str:
+        return str(self.func)
+
+    def __repr__ (self) -> str:
+        return self.__str__()
+
     @property
     def dfunc (self):
         # 1º derivative of the given function
