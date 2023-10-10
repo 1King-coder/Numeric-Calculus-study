@@ -1,6 +1,7 @@
 from Vectors import Vector
 from copy import deepcopy
 from Matrix import Matrix
+from decimal import Decimal
 import sympy as sym
 
 class Linear_System (Matrix):

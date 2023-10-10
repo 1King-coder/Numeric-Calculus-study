@@ -415,7 +415,7 @@ class Matrix:
                 multiplier =  - sym.Rational(escalonated_matrix[j][i], escalonated_matrix[i][i])
                 
                 escalonated_matrix[j] = [
-                    escalonated_matrix[j][k] + escalonated_matrix[i][k]*multiplier
+                    round(escalonated_matrix[j][k] + escalonated_matrix[i][k]*multiplier, 10)
                     for k in range(cols_num)
                 ]
                 self.gauss_iterations.append(
