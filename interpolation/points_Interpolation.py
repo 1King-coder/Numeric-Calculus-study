@@ -6,13 +6,24 @@ from Vectors import Vector
 from Matrix import Matrix
 from Linear_systems import Linear_System
 import sympy as sym
+from copy import deepcopy
 
 global x
 
 x = sym.symbols('x')
 
+memory = {}
+def memoization (key: str = '', value = None, clear: bool = False):
+    if clear:
+        memory.clear()
+        return print('Memory successfuly cleared.')
+    
+    if key in memory:
+        return memory[key]
+    
+    memory[key] = value
 
-
+    return value    
 
 class Interpolate:
     """
@@ -119,6 +130,61 @@ class Interpolate:
         
         return inter_polynomial
 
+    def newton_operator (self, x_coordinates: list):
+        """
+        Newton's operator f[xi;...;xn] for divisions between subtractions that appear
+        in his method of interpolating points.
+        f[xi;...;xn] = (f[xi+1;...;xn] - f[xi; xn-1]) / (xn - xi)
+        As this function is recursive and has repeated terms while calculating, it was
+        implemented the memoization method by a external function called "memoization".
+        This memoization method helps to speedup the calculations.
+        """
+
+        num_of_points = len(x_coordinates)
+        list_of_points_str = f"f{str(x_coordinates)}"
+
+        if num_of_points == 1:
+            return memoization(
+                list_of_points_str,
+                self.y_values[self.x_values.index(x_coordinates[0])]
+            )
+        
+        if list_of_points_str in memory:
+            return memory[list_of_points_str]
+                
+        return memoization(
+            list_of_points_str,
+            (self.newton_operator(x_coordinates[1:]) - # f[xi+1;...;[xn]]
+             self.newton_operator(x_coordinates[:num_of_points-1])) / # f[xi;...;xn-1]
+            (x_coordinates[num_of_points - 1] - x_coordinates[0]) # (xn - xi)
+        )
+        
+    def newton_method (self):
+        """
+        Newton's method of building an interpolation polynominal function Pn(x).
+        Pn(x) = f[x0] + f[x0;x1]*(x - x0) + f[x0;x1;x2]*(x - x0)*(x - x1) ... f[x0;...;xn]*...*(x - xn-1)
+        where f[xi;...;xn] is the Newton's operator.
+        """
+
+        inter_polynomial = 0
+
+        for i in range(1, self.num_of_points + 1):
+            # i-th term = f[xi-1;...;xi]
+            term_i = self.newton_operator(self.x_values[:i])
+
+            for j in range(i - 1):
+                # i-th term = f[xi-1;...;xi]*(x - x0)*...*(x - xi)
+                term_i *= (x - self.x_values[j])
+
+            inter_polynomial += sym.expand(term_i)
+        
+        self.newton_iterations = deepcopy(memory)
+
+        # Clear memory after usage
+        memoization(clear=True)
+        
+        return inter_polynomial
+
     
 
 if __name__ == '__main__':
@@ -129,8 +195,21 @@ if __name__ == '__main__':
         (3, -8),
     ])
 
-    print (inter.lagrange_method(), sep="\n")
-    print (*inter.lagrange_iterations, sep="\n")
+    # print (inter.lagrange_method(), sep="\n")
+    # print (*inter.lagrange_iterations, sep="\n")
 
-    print (inter.vandermond_method(), sep="\n")
-    print (*inter.vandermond_iterations, sep="\n")
+    # print (inter.vandermond_method(), sep="\n")
+    # print (*inter.vandermond_iterations, sep="\n")
+    dic = { str([(1, 2), (3, 4)]): 123}
+
+    points = [0, 1, 2, 3]
+
+    
+
+
+
+    print (inter.lagrange_method())
+    print (inter.vandermond_method())
+    print (inter.newton_method())
+
+    print(inter.newton_iterations, sep="\n")
