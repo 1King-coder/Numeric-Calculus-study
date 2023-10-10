@@ -37,7 +37,7 @@ class Interpolate:
 
         self.lagrange_iterations = list()
         self.vandermond_iterations = dict()
-        self.newton_iterations = list()
+        self.newton_iterations = dict()
 
     @property
     def x_values (self) -> float:
@@ -168,15 +168,18 @@ class Interpolate:
 
         inter_polynomial = 0
 
+        multiplications = 1
+
         for i in range(1, self.num_of_points + 1):
             # i-th term = f[xi-1;...;xi]
-            term_i = self.newton_operator(self.x_values[:i])
+            newton_operator = self.newton_operator(self.x_values[:i])
 
-            for j in range(i - 1):
-                # i-th term = f[xi-1;...;xi]*(x - x0)*...*(x - xi)
-                term_i *= (x - self.x_values[j])
+            newton_operator *= multiplications
+            
+            # Multiplications = (x - xi-1)
+            multiplications *= (x - self.x_values[i - 1])
 
-            inter_polynomial += sym.expand(term_i)
+            inter_polynomial += sym.expand(newton_operator)
         
         self.newton_iterations = deepcopy(memory)
 
@@ -212,4 +215,3 @@ if __name__ == '__main__':
     print (inter.vandermond_method())
     print (inter.newton_method())
 
-    print(inter.newton_iterations, sep="\n")
