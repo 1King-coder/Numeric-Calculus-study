@@ -29,6 +29,9 @@ class Func:
 
         return (function if function else self.func).subs({self.x: value})
     
+    def __call__ (self, value, function=None):
+        return self.f(value, function)
+    
     def __str__ (self) -> str:
         return str(self.func)
 
