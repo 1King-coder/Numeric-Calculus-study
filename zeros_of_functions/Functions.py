@@ -1,8 +1,9 @@
-from math import ceil, log, cos, sin
+from math import ceil, log, cos, sin, exp
 from decimal import getcontext, Decimal
 from random import randrange
 import sympy as sym
 import numpy as np
+
 
 prec = 6
 getcontext().prec = prec
@@ -316,18 +317,65 @@ class Func:
             'iterations': iterations_list
         }
 
+    @property
+    def critical_x_coordinates (self):
+        """
+        Method to obtain the max value of the function.
+        """
+
+        # Solves the expression f'(x) = 0 to find a critical point
+        x_coordinate = sym.solve(self.dfunc, self.x)
+
+        return x_coordinate # return and array with the critical points found
+    
+    def is_max (self, x_coordinate: float):
+        # Verify if a given x coordinate is a critical max coordinate.
+        return self.f(x_coordinate, self.ddfunc) < 0
+    
+    def global_max_min (self, option: str):
+        """
+        Return the global max or min function value, must send the option.
+        if you want the global max, option='max', else option='min'
+        """
+
+        option = option.lower().strip()
+
+        func_global_values = [
+            float(self.f(x))
+            for x in self.critical_x_coordinates
+        ]
+
+        global_max = max(func_global_values)
+        global_min = min(func_global_values)
+
+        return global_max if option == 'max' else global_min
+
+    def find_x_for (self, f_value: float) -> float:
+        """
+        Method to find the relative x coordinate for a wanted f(x) value.
+        """
+        
+        # Expression f(x) = value -> f(x) - value
+        expression_to_solve = self.func - f_value
+
+        result_x = sym.solve(expression_to_solve, self.x)[0]
+
+        return result_x
+
 if __name__ == '__main__':
     # tests
     x = sym.symbols('x')
 
-    f = x**3 + 4*x**2 - 2
+    Vc = x**3 -2*x**2 + 4
 
+
+    
     func = Func(
-        f, x
+        Vc, x
     )
     
     print(
-        *func.secant_method(-2, 0, 10**(-2))['iterations'], sep='\n'
+        func.func_max(), sep='\n'
     )
     ...
 
