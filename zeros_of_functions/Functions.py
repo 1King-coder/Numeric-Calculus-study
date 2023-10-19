@@ -23,13 +23,26 @@ class Func:
     
     def f (self, value, function=None):
         # Makes getting the function value from a given X easy
+        function_to_use = function if function else self.func
+
         if isinstance(value, np.ndarray):
             # Checks if the value is a ndarray and converts the results to
             # an array, making the use of it with matplotlib possible and easier
-            return [(function if function else self.func).subs({self.x: i}) for i in value]
+            return [float(function_to_use.subs({self.x: i}).evalf()) for i in value]
 
-        return (function if function else self.func).subs({self.x: value})
+        return float(function_to_use.subs({self.x: value}).evalf())
     
+    @property
+    def degree (self) -> int:
+        # Returns the polynomials degree. if it is no polynomial
+        # it returns the highest exponent.
+        
+        degrees = []
+        for element in self.func.args:
+            degrees.append(element.as_base_exp()[1])
+
+        return max(degrees)
+
     def __call__ (self, value, function=None):
         return self.f(value, function)
     
@@ -39,20 +52,9 @@ class Func:
     def __repr__ (self) -> str:
         return self.__str__()
 
-    @property
-    def dfunc (self):
-        # 1º derivative of the given function
-        return self.func.diff()
-    
-    @property
-    def ddfunc (self):
-        # 2º derivative of the given function
-        return self.dfunc.diff()
-    
-    @staticmethod
-    def _d (function: sym.core.add.Add):
-        # Derivates a given function
-        return function.diff()
+    def dfunc (self, n: int = 1):
+        # nº derivative of the given function
+        return self.func.diff((self.x, n))
     
     def secant_factor (self, x0: 'Decimal', x1: 'Decimal') -> float:
 
@@ -60,7 +62,7 @@ class Func:
         
     def verify_derivate (self, a) -> bool:
         # Verify if the derivate of the function in x=a is 0
-        if self.dfunc == 0:
+        if self.dfunc() == 0:
             print('Derivative = 0')
             return False
         
@@ -159,7 +161,7 @@ class Func:
         while abs(f_x) > TOL and iteration < 100:
             
             f_x = self.f(x)
-            df_x = self.f(x, self.dfunc)
+            df_x = self.f(x, self.dfunc(1))
 
             x -= (f_x / df_x)
 
@@ -324,13 +326,13 @@ class Func:
         """
 
         # Solves the expression f'(x) = 0 to find a critical point
-        x_coordinate = sym.solve(self.dfunc, self.x)
+        x_coordinate = sym.solve(self.dfunc(1), self.x)
 
         return x_coordinate # return and array with the critical points found
     
     def is_max (self, x_coordinate: float):
         # Verify if a given x coordinate is a critical max coordinate.
-        return self.f(x_coordinate, self.ddfunc) < 0
+        return self.f(x_coordinate, self.dfunc(2)) < 0
     
     def global_max_min (self, option: str):
         """
@@ -366,17 +368,18 @@ if __name__ == '__main__':
     # tests
     x = sym.symbols('x')
 
-    Vc = x**3 -2*x**2 + 4
-
-
+    Vc = x**2 + 2*x - 1
     
     func = Func(
         Vc, x
     )
     
     print(
-        func.func_max(), sep='\n'
+        func.dfunc(),sep='\n'
     )
+
+    
+
     ...
 
 
