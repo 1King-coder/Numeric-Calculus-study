@@ -20,9 +20,7 @@ import math
 
 x = sym.symbols('x') # x icognito to build expressions
 
-memory = {} # external variable
-
-def memoization (key: str = '', value = None, clear: bool = False):
+def memoization (memory: dict, key: str = '', value = None, clear: bool = False):
     """
     Memoization function that uses external global variable to store useful data
     temporaly.
@@ -44,7 +42,7 @@ def sep_tuple_values (tuples_list: list, index: int) -> list:
 
     return [tuple_vals[index] for tuple_vals in tuples_list]
 
-class Interpolate:
+class Interpolation_Methods:
     """
     Class with different methods to make interpolation functions of a given group
     of points in R²
@@ -55,6 +53,8 @@ class Interpolate:
         self.original_func = original_function
         self.prec = precision
         self.num_of_points = len(points)
+
+        self.__memo = {} # memory for using memoization safetly
 
         self.lagrange_iterations = list()
         self.vandermond_iterations = dict()
@@ -212,21 +212,23 @@ class Interpolate:
 
         if num_of_points == 1:
             return memoization(
+                self.__memo,
                 list_of_points_str,
                 self.y_values[self.x_values.index(x_coordinates[0])]
             )
         
-        if list_of_points_str in memory:
-            return memory[list_of_points_str]
+        if list_of_points_str in self.__memo:
+            return self.__memo[list_of_points_str]
         
         result = memoization(
+            self.__memo,
             list_of_points_str,
             round((self.newton_operator(x_coordinates[1:]) - # f[xi+1;...;[xn]]
             self.newton_operator(x_coordinates[:num_of_points-1])) / # f[xi;...;xn-1]
             (x_coordinates[num_of_points - 1] - x_coordinates[0]), self.prec) # (xn - xi)
         )
 
-        self.newton_iterations = deepcopy(memory) # saves the iterations
+        self.newton_iterations = deepcopy(self.__memo) # saves the iterations
 
                 
         return result
@@ -253,20 +255,19 @@ class Interpolate:
 
             inter_polynomial += sym.expand(newton_operator)
         
-        self.newton_iterations = deepcopy(memory)
-
         # Clear memory after usage
         memoization(clear=True)
         
         return Func(inter_polynomial, x)
         
     
-class Interpolation_errors (Interpolate):
+class Interpolate (Interpolation_Methods):
 
     def __init__(self, points: list, original_function: 'Func' = None, precision: int = 5) -> None:
         super().__init__(points=points, precision=precision)
 
         self.original_func = original_function
+        self.__memo = {} # memory for using memoization safetly
 
         self.corollary_1_iterations: dict = dict()
         self.corollary_2_iterations: dict = dict()
@@ -308,6 +309,8 @@ class Interpolation_errors (Interpolate):
 
         # Takes all the modules of the Newton's operator values from the order
         order_operators_values = [abs(value) for _, value in self.newton_iterations[f'Order {order}']]
+
+        memoization(self.__memo, clear=True) # Clear memory after usage
 
         return max(order_operators_values)     
     
@@ -355,17 +358,21 @@ class Interpolation_errors (Interpolate):
         # Gets the max(f^(n+1)(x))
         M_value = self.M_factor(polynomial_degree + 1)
 
-        print(M_value)
-
         # Builds the Corollary expression for any error
         corollary_1_error_expression = self.abs_productory() * (M_value / math.factorial(polynomial_degree + 1))
+
+        self.corollary_1_iterations = {
+            f'M({polynomial_degree + 1})': M_value,
+            'Err(x)': corollary_1_error_expression
+        }
 
         # Turns the expression into a function to make calculating it's values easier.
         corollary_1_error_function = Func(corollary_1_error_expression, x)
 
-
         if x_coordinate:
-            return round(corollary_1_error_function(x_coordinate), self.prec)
+            err = round(corollary_1_error_function(x_coordinate), self.prec)
+            self.corollary_1_iterations[f'Err({x_coordinate})'] = err
+            return 
         
         return corollary_1_error_function
     
@@ -380,7 +387,7 @@ class Interpolation_errors (Interpolate):
              x coordinate given is equal and we have the original function expression.
 
              2 - Note that this corollary is an estimative for the error
-             in the x interval where the given points is contained. 
+             in the x interval where the given points is contained.
         """
         if not self.original_func:
             print('Needs the original function to use this corollary.')
@@ -392,16 +399,25 @@ class Interpolation_errors (Interpolate):
 
         interval_between_points = abs(self.x_values[1] - self.x_values[0])
 
-        corollary_2_error = ((interval_between_points**(n+1)) * M_value)/ (4*(n+1))
+        corollary_2_error = round(
+            ((interval_between_points**(n+1)) * M_value)/ (4*(n+1)),
+            self.prec
+        )
+
+        self.corollary_2_iterations = {
+            f'M({n + 1})': M_value,
+            'Err(x)': corollary_2_error
+        }
         
-        return round(corollary_2_error, self.prec)
+        return corollary_2_error
     
     def corollary_3 (self, polynomial_degree: int, x_coordinate: float = None):
         """
         Corollary 3 for calculating the discrepancy between the interpolation polynom
         and the original function.
         Err(x) ≈  (Π |x - xi| from i = 0 to n) * A
-        Where A = max(|f[X0;...;Xorder+1]|) and A is the highest value of the newton's operator values from the order n + 1
+        Where A = max(|f[X0;...;Xorder+1]|) and A is the highest value of the Newton's
+        operator values from the order n + 1
         where n is the interpolation polynomial degree.
 
         Ps.: 1 - This corollary only works if the number of points given is higher than the
@@ -409,7 +425,9 @@ class Interpolation_errors (Interpolate):
 
              2 - Note that this corollary is an estimative for the error
              in the x interval where the given points is contained, but this corollary.
-             points to and aproximation, not an estimative. 
+             points to and aproximation, not an estimative.
+
+             3 - This corollary is most used when we do not have the original function expresison. 
         """
         
         if self.num_of_points < polynomial_degree:
@@ -418,6 +436,8 @@ class Interpolation_errors (Interpolate):
         
         A_value = self.A_factor(polynomial_degree + 1)
 
+        self.corollary_3_iterations['Operators'] = self.newton_iterations
+        self.corollary_3_iterations['A_factor'] = A_value
         
         # Takes the points where the interval between them is equal
         best_points = set() # set type to avoid repeating any coordinate
@@ -427,14 +447,19 @@ class Interpolation_errors (Interpolate):
                 best_points = best_points.union(set(self.x_values[i:i+3]))
         
         best_points = list(best_points) # get back to list type
-        
 
+        self.corollary_3_iterations['Best_points'] = best_points
+        
         corollary_3_expresison = self.abs_productory(polynomial_degree + 1, best_points) * A_value
+        
+        self.corollary_3_iterations['Err(expr)'] = corollary_3_expresison
 
         corollary_3_function = Func(corollary_3_expresison, x)
 
         if x_coordinate:
-            return round(corollary_3_function(x_coordinate), self.prec)
+            err = round(corollary_3_function(x_coordinate), self.prec)
+            self.corollary_3_iterations[f'Err({x_coordinate})'] = err
+            return err
         
         return corollary_3_function
 
@@ -484,10 +509,6 @@ if is_main:
     # print (inter.vandermond_method())
     or_func = Func(sym.exp(x)*sym.cos(x), x)
 
-    err = Interpolation_errors(points_2, precision=10)
+    err = Interpolate(points_2, precision=10)
     
     print (err.corollary_3(2, -0.1))
-    
-       
-
-
