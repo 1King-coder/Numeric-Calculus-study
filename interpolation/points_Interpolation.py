@@ -20,7 +20,7 @@ import math
 
 x = sym.symbols('x') # x icognito to build expressions
 
-def memoization (memory: dict, key: str = '', value = None, clear: bool = False):
+def memoization (memory: dict = {}, key: str = '', value = None, clear: bool = False):
     """
     Memoization function that uses external global variable to store useful data
     temporaly.
@@ -273,12 +273,18 @@ class Interpolate (Interpolation_Methods):
         self.corollary_2_iterations: dict = dict()
         self.corollary_3_iterations: dict = dict()
 
+        self.derivatives: dict = dict() # Allows us to retrieve the derivatives
+        # calculated to use some method
+
     def M_factor (self, n: int) -> float:
         """
         Calculates the M[n] = max(|f^(n+1)(x)|), where f^(n + 1) corresponds to (n+1)º derivative
         of the function.
         """
         # Builds the (n + 1)º derivative to use in the corollary 
+        for derivative in range(1, n + 1):
+            self.derivatives['f' + ("'"*derivative) + '(x)'] = self.original_func.dfunc(derivative)
+
         derivative_expression = self.original_func.dfunc(n)
         derivative_func = Func(derivative_expression, x)
 
@@ -360,7 +366,6 @@ class Interpolate (Interpolation_Methods):
 
         # Builds the Corollary expression for any error
         corollary_1_error_expression = self.abs_productory() * (M_value / math.factorial(polynomial_degree + 1))
-
         self.corollary_1_iterations = {
             f'M({polynomial_degree + 1})': M_value,
             'Err(x)': corollary_1_error_expression
@@ -372,7 +377,7 @@ class Interpolate (Interpolation_Methods):
         if x_coordinate:
             err = round(corollary_1_error_function(x_coordinate), self.prec)
             self.corollary_1_iterations[f'Err({x_coordinate})'] = err
-            return 
+            return err
         
         return corollary_1_error_function
     
@@ -497,7 +502,7 @@ if is_main:
         (1, 1.4687),
     ]
 
-    inter = Interpolate(points_2)
+    inter = Interpolate(points_1)
 
     # print (inter.lagrange_method(), sep="\n")
     # print (*inter.lagrange_iterations, sep="\n")
@@ -509,6 +514,6 @@ if is_main:
     # print (inter.vandermond_method())
     or_func = Func(sym.exp(x)*sym.cos(x), x)
 
-    err = Interpolate(points_2, precision=10)
+    err = Interpolate(points_3, or_func, precision=10)
     
-    print (err.corollary_3(2, -0.1))
+    print (err.newton_method())
