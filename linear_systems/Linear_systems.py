@@ -6,11 +6,11 @@ import sympy as sym
 
 class Linear_System (Matrix):
 
-    def __init__ (self, transform_matrix: list, b_vector: 'Vector', precision: int = 5) -> None:
+    def __init__ (self, transform_matrix: list, b_vector: 'Vector', precision: int = 5, custom_icognitos: str = 'x') -> None:
         
         self.rows_num = len(transform_matrix)
         self.cols_num = len(transform_matrix[0])
-        self.icognitos = [sym.symbols(f'x{i+1}') for i in range(self.rows_num)]
+        self.icognitos = [sym.symbols(f'{custom_icognitos}{i+1}') for i in range(self.rows_num)]
         
         if self.rows_num != self.cols_num:
             transform_matrix = self.expression_to_matrix(transform_matrix)
