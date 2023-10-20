@@ -2,6 +2,7 @@ from random import randint
 from typing import Union
 from copy import deepcopy
 import sympy as sym
+
 """
 In this module i aimed to
 create some Matrix calculations
@@ -289,6 +290,19 @@ class Matrix:
         
         return Matrix.div_matrix_by_number(matrix_1, param)       
     
+    def to_line_matrix (matrix: 'Matrix') -> list:
+        """
+        Returns the matrix as a Vector type
+        """
+        if matrix.isQuadratic:
+            raise ArithmeticError(f'Can not build Vector from a {matrix.size} matrix')
+        
+        if matrix.isColumn:
+            coefficients = [row[0] for row in matrix.matrix]
+
+            return coefficients
+        
+        return matrix
 
     @staticmethod
     def mul_matrices(matrix_1: 'Matrix', matrix_2: 'Matrix') -> 'Matrix':
@@ -344,10 +358,9 @@ class Matrix:
         ))
     
 
-    @staticmethod
-    def transpose(matrix: 'Matrix') -> 'Matrix':
+    def transpose(self) -> 'Matrix':
         """
-        Transpose a Matrix.
+        Transpose the Matrix.
         """
 
         """
@@ -358,7 +371,7 @@ class Matrix:
         )
         """
 
-        return Matrix(list(map(list, zip(*matrix.matrix))))
+        return Matrix(list(map(list, zip(*self.matrix))))
 
     @staticmethod
     def minor_coplementary (matrix: list, i: int, j: int) -> Union[int, float]:
@@ -430,8 +443,8 @@ class Matrix:
                 self.L_factor[j][i] = multiplier
                 
             counter += 1            
-
-        self.L_factor = self.L_factor # To ensure there is the 1's in de main diagonal
+        if self.isQuadratic:
+            self.L_factor = self.L_factor # To ensure there is the 1's in de main diagonal
         
         return escalonated_matrix
                 
