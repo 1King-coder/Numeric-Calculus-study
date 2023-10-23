@@ -8,11 +8,16 @@ i, j, k = sym.symbols('i j k')
 
 class Vector (list):
 
-    def __init__ (self, *args):
+    def __init__ (self, *args, **kwargs):
+
+        icognito_symbol = kwargs.get('icognito')
+
+        if not icognito_symbol:
+            icognito_symbol = 'x'
     
         for index in range(len(args)):
             self.append(args[index])
-            self.__dict__[f'x{index + 1}'] = args[index]
+            self.__dict__[f'{icognito_symbol}{index + 1}'] = args[index]
 
 
     @property

@@ -21,6 +21,13 @@ class Func:
         self.func = func
         self.x = x
     
+    def isConstant (self, function) -> bool:
+        """
+        verify if f(x) = k where k is a constant.
+        """
+
+        return isinstance(function, int) or isinstance(function, float)
+
     def f (self, value, function=None):
         # Makes getting the function value from a given X easy
         function_to_use = function if function else self.func
@@ -28,9 +35,16 @@ class Func:
         if isinstance(value, np.ndarray):
             # Checks if the value is a ndarray and converts the results to
             # an array, making the use of it with matplotlib possible and easier
-            return [float(function_to_use.subs({self.x: i}).evalf()) for i in value]
-
-        return float(function_to_use.subs({self.x: value}).evalf())
+            return [
+                function_to_use
+                if self.isConstant(function_to_use) else
+                float(function_to_use.subs({self.x: i}).evalf())
+                for i in value
+            ]
+        res = function_to_use if self.isConstant(function_to_use) else float(
+            function_to_use.subs({self.x: value}).evalf()
+        )
+        return res
     
     @property
     def degree (self) -> int:

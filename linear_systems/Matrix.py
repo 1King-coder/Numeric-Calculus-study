@@ -30,12 +30,12 @@ class Matrix:
         self.rows_num: int = len(self.matrix)
         self.cols_num: int = len(self.matrix[0])
         self.num_of_changed_lines: int = 0
+        self.size: str = f'{self.rows_num}x{self.cols_num}'
         self.P_factor: Union[list, None] = []
         self.L_factor: Union[list, None] = []
         self.A_factor: Union[list, None] = deepcopy(self.matrix)
         self.U_factor: Union[list, None] = []
 
-        self.size: str = f'{self.rows_num}x{self.cols_num}'
 
     @property
     def isColumn (self) -> bool:
@@ -294,7 +294,7 @@ class Matrix:
         """
         Returns the matrix as a Vector type
         """
-        if matrix.isQuadratic:
+        if matrix.isQuadratic and matrix.size != '1x1':
             raise ArithmeticError(f'Can not build Vector from a {matrix.size} matrix')
         
         if matrix.isColumn:
@@ -412,17 +412,20 @@ class Matrix:
         returns the partialy escalonated matrix (triangular matrix).
         """
         counter = 0
-        if self.isRow or self.isColumn:
-            return None
 
         escalonated_matrix = deepcopy(matrix)
         rows_num = len(matrix)
         cols_num = len(matrix[0])
         self.gauss_iterations = []
+
+        to_sort = [self.P_factor, self.A_factor, self.L_factor]
+
+        if None in to_sort:
+            to_sort = []
         
         for i in range(cols_num):
             if counter != self.rows_num:
-                self.order_lines(escalonated_matrix, [self.P_factor, self.A_factor, self.L_factor], i)
+                self.order_lines(escalonated_matrix, to_sort, i)
                 
             for j in range(i + 1, rows_num):
                 multiplier =  - sym.Rational(escalonated_matrix[j][i], escalonated_matrix[i][i])
@@ -443,7 +446,7 @@ class Matrix:
                 self.L_factor[j][i] = multiplier
                 
             counter += 1            
-        if self.isQuadratic:
+        if self.isQuadratic and self.size != '1x1':
             self.L_factor = self.L_factor # To ensure there is the 1's in de main diagonal
         
         return escalonated_matrix

@@ -6,11 +6,12 @@ import sympy as sym
 
 class Linear_System (Matrix):
 
-    def __init__ (self, transform_matrix: list, b_vector: 'Vector', precision: int = 5, custom_icognitos: str = 'x') -> None:
+    def __init__ (self, transform_matrix: list, b_vector: 'Vector', precision: int = 5, custom_icognito: str = 'x') -> None:
         
         self.rows_num = len(transform_matrix)
         self.cols_num = len(transform_matrix[0])
-        self.icognitos = [sym.symbols(f'{custom_icognitos}{i+1}') for i in range(self.rows_num)]
+        self.custom_icognito = custom_icognito
+        self.icognitos = [sym.symbols(f'{custom_icognito}{i+1}') for i in range(self.rows_num)]
         
         if self.rows_num != self.cols_num:
             transform_matrix = self.expression_to_matrix(transform_matrix)
@@ -116,7 +117,7 @@ class Linear_System (Matrix):
             res = sym.solve(line, icognitos_to_solve[index])[0]
 
             # Round and store the results
-            solved_icognitos[icognitos_to_solve[index]] = res
+            solved_icognitos[icognitos_to_solve[index]] = round(res,  self.precision)
 
         # Sorts the solutions
         solved_icog_list = list(solved_icognitos.items())
@@ -130,7 +131,7 @@ class Linear_System (Matrix):
             solved_icog_list
         }
 
-        return Vector(*solved_icognitos.values())
+        return Vector(*solved_icognitos.values(), icognito=self.custom_icognito)
     
     @property
     def fi_function (self):
@@ -306,7 +307,7 @@ class Linear_System (Matrix):
         """
         actual_icognitos_values = calculate_icognitos_values(actual_icognitos_values, last_icognitos_values)
 
-        sol_vector = Vector(*actual_icognitos_values.values())
+        sol_vector = Vector(*actual_icognitos_values.values(), icognito=self.custom_icognito)
 
         last_vector = initial_vector
 
@@ -315,9 +316,9 @@ class Linear_System (Matrix):
         
         iteration = 1
         iterations = [
-            {'iter': 0, 'x(0)': last_vector},
-            {'iter': 1, 'x(1)': sol_vector, 
-            f'||x({iteration}) - x({iteration-1})||':  round(dif_module, self.precision)}
+            {'iter': 0, f'{self.custom_icognito}(0)': last_vector},
+            {'iter': 1, f'{self.custom_icognito}(1)': sol_vector, 
+            f'||{self.custom_icognito}({iteration}) - {self.custom_icognito}({iteration-1})||':  round(dif_module, self.precision)}
             ]
 
 
@@ -333,14 +334,14 @@ class Linear_System (Matrix):
             actual_icognitos_values = calculate_icognitos_values(actual_icognitos_values, last_icognitos_values)
             
             # Update solution values.
-            sol_vector = Vector(*actual_icognitos_values.values())
+            sol_vector = Vector(*actual_icognitos_values.values(), icognito=self.custom_icognito)
 
             dif_module = (sol_vector - last_vector).module
 
             iterations.append({
                 'iter': iteration,
-                f'x({iteration})': sol_vector,
-                f'||x({iteration}) - x({iteration-1})||':  round(dif_module, self.precision)
+                f'{self.custom_icognito}({iteration})': sol_vector,
+                f'||{self.custom_icognito}({iteration}) - {self.custom_icognito}({iteration-1})||':  round(dif_module, self.precision)
             })
     
 
