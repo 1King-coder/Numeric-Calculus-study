@@ -289,12 +289,14 @@ class Interpolate (Interpolation_Methods):
         derivative_func = Func(derivative_expression, x)
 
         # Calculates the derivatives value for every point given
-        derivative_values = [
+        
+
+        self.derivative_values = [
             abs(derivative_func(x_coord))
             for x_coord in self.x_values
         ]
 
-        return max(derivative_values)
+        return max(self.derivative_values)
     
     def A_factor (self, order: int) -> float:     
         """
