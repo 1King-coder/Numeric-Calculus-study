@@ -45,6 +45,14 @@ def sep_tuple_values (tuples_list: list, index: int) -> list:
     return [tuple_vals[index] for tuple_vals in tuples_list]
 
 class Linear_adjust:
+    """
+    This class contains methods to make linear fits curves for a given group of
+    points and an expression which you wish to find the coefficients for each
+    parcel to obtain the linear fit curve.
+    The parcels_expressions is a ordered list of the guess linear function
+    φ(x) = Σαi.gi(x)
+    So parcels_expressions = [g0(x), g1(x), ..., gn(x)]
+    """
 
     def __init__(self, points: list, parcels_expressions: list = None, precision=5, custom_icognito: str= 'α') -> None:
         self.points = points
@@ -65,6 +73,7 @@ class Linear_adjust:
     
     @parcels_funcs.setter
     def parcels_funcs (self, value):
+        # This setter makes every parcel expression a Func object.
         if not value:
             self.__parcels_funcs = value
             return
@@ -77,6 +86,7 @@ class Linear_adjust:
 
     @property
     def y_vector (self) -> 'Vector':
+        # Vector with the given points y values
         return Vector(*self.y_values)
     
     def V_matrix (self) -> 'Matrix' or None:
@@ -99,46 +109,58 @@ class Linear_adjust:
         term_function = lambda i, j: round(
             self.parcels_funcs[j](self.x_values[i]),
             self.prec
-        )
+        ) # function that builds gj(xi)
 
         list_matrix = Matrix.map_matrix (
             term_function,
             self.num_of_points,
             num_of_parcels,
-        )
+        ) # array-like matrix
 
-        matrix_V = Matrix(list_matrix)
+        matrix_V = Matrix(list_matrix) # Turns in Matrix object
 
         return matrix_V
     
     def calculate_coefficients (self) -> 'Vector':
         """
-        
+        This function uses the minimun squares method with auxiliar matrices to
+        obtain the wished coefficients.
+        The method consists in solving the linear system Aα = y where:
+        A is the transformation matrix of minimal squares and y is the vector built
+        from the y values of each point.
+        The auxiliar matrix consists in creating a matrix named V where Vt * V = A
+        and Vt is V transposed.
+        So the linear systems is: (Vt * V )* α = Vt * y
+        the result is the vector with the α coefficients values. 
         """
         
-        V_matrix = self.V_matrix()
+        V_matrix = self.V_matrix() # Creates the V matrix
 
-        VT_matrix = V_matrix.transpose()
+        VT_matrix = V_matrix.transpose() # Takes the transposed V matrix
 
         if not V_matrix:
             print('You must give the guess expression functions to calculate the adjust.')
             return
         
-        transf_matrix = VT_matrix * V_matrix
+        transf_matrix = VT_matrix * V_matrix # builds A = Vt * V
 
         transformed_y_vector = Vector(
             *((VT_matrix * self.y_vector.column_matrix).to_line_matrix())
-        )
+        ) # Transforms the Y vector to Vt * Y and retrieves it as a vector
 
-        adjust_linear_system = Linear_System(transf_matrix.matrix, transformed_y_vector, custom_icognito=self.custom_icognito)
+        adjust_linear_system = Linear_System(
+            transf_matrix.matrix,
+            transformed_y_vector,
+            custom_icognito=self.custom_icognito
+        ) # Creates the linear Sytem Object to be solved
 
-        alphas_values = adjust_linear_system.gauss_elimination_method()
+        alphas_values = adjust_linear_system.gauss_elimination_method() # takes the coefficients Vector
 
         return alphas_values
     
     def build_linear_fit_function (self, displacement: float = 0) -> 'Func':
         """
-        
+        Builds the final linear fit curve as a Func object.
         """
         coefficients = self.calculate_coefficients()
 
