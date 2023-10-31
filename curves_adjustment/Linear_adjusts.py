@@ -194,6 +194,9 @@ if __name__ == '__main__':
         (1, 175),
     ]
 
+    fig, axe = plt.subplots()
+    
+
     lin_ad = Linear_adjust(points_1)
 
-    lin_ad.visualize_points()
+    lin_ad.visualize_points(fig, axe)
