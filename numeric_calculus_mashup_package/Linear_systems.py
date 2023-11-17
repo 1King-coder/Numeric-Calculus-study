@@ -1,10 +1,5 @@
-if __name__ != '__main__':
-    from .Matrix import Matrix
-    from .Vectors import Vector
-else:
-    from Vectors import Vector
-    from Matrix import Matrix
-    
+from .Matrix import Matrix
+from .Vectors import Vector    
 from copy import deepcopy
 from decimal import Decimal
 import sympy as sym

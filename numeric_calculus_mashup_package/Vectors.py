@@ -1,9 +1,4 @@
-if __name__ != '__main__':
-    from .Matrix import Matrix
-
-else:
-    from Matrix import Matrix
-    
+from .Matrix import Matrix
 import math
 from typing import Any
 import sympy as sym

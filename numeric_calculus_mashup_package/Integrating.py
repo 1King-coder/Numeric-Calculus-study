@@ -1,17 +1,5 @@
-import sys
-is_main = __name__ == "__main__"
-
-function_path = '.\\zeros_of_functions\\' if is_main else '..\\zeros_of_functions\\'
-lin_sys_path = '.\\linear_systems\\' if is_main else '..\\linear_systems\\'
-interpolation_path = '.\\interpolation\\' if is_main else '..\\interpolation\\'
-
-
-sys.path.append(interpolation_path)
-sys.path.append(lin_sys_path)
-sys.path.append(function_path)
-
-from points_Interpolation import Interpolate
-from Functions import Func
+from .points_interpolation import Interpolate
+from .Functions import Func
 import numpy as np
 import matplotlib.pyplot as plt
 import sympy as sym
