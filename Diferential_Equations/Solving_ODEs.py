@@ -95,12 +95,12 @@ class SolvingODEs:
     def taylor_series_formulas (self, derivative: 'sym.Add', taylor_order: int, step: float) -> list:
 
         x = sym.Symbol("x")
-        taylor_expansion = sym.Function("y")(x)
+        taylor_expansion = 0
         parcels = [
-            derivative
+            sym.Function("y")(x)
         ]
         
-        for i in range(1, taylor_order + 1):
+        for i in range(0, taylor_order + 1):
             taylor_expansion += parcels[-1] * (step**i) / sym.factorial(i)
 
             parcels.append(
@@ -111,6 +111,7 @@ class SolvingODEs:
                 )
             )
             
+        print(parcels)
         return taylor_expansion
 
         ...
@@ -131,8 +132,6 @@ class SolvingODEs:
             sym.Function('y')(sym.Symbol("x")).diff(sym.Symbol("x"))
         )[0]
 
-        
-
         taylor_expression = self.taylor_series_formulas(derivative, taylor_order, step)
         print(taylor_expression)
         solutions = [
@@ -146,11 +145,10 @@ class SolvingODEs:
                 ), self.prec)
             )
         ]
-        interval = [self.points[0][0], target]
 
         x_values_in_interval = np.arange(
-            interval[0] + 2 * step,
-            interval[1] + step,
+            self.points[0][0] + 2 * step,
+            target + step,
             step
         )
 
@@ -160,8 +158,8 @@ class SolvingODEs:
                     x_val,
                     round(taylor_expression.subs(
                     {
-                        sym.Symbol("x"): x_val + step,
-                        sym.Function("y")(sym.Symbol("x")): solutions[i][1]
+                        sym.Symbol("x"): solutions[i][0],
+                        sym.Function("y")(sym.Symbol("x")): solutions[i-1][1]
                     }
                 ), self.prec)
                 )
@@ -180,7 +178,7 @@ if __name__ == "__main__":
 
 
 
-    ode = SolvingODEs(eq, [(1, 0)])
+    ode = SolvingODEs(eq, [(1, 0)], 7)
 
-    print(ode.euler_method(1.2, 0.1))
+    print(ode.taylor_series_method(1.2, 3, 0.1))
 
