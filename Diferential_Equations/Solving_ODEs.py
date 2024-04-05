@@ -8,7 +8,8 @@ class SolvingODEs:
         self.points = points
         self.ode_type = "IVP" if len(points) == 1 else "BVP"
         self.prec = precision
-        self.ode_order = equation.args[-1].count("'")
+        self.ode_order = str(equation.args[-1]).count("'")
+        
 
     def euler_equation (self, f: 'sym.Add', last_point: tuple, step: float) -> tuple:
         """
@@ -29,12 +30,12 @@ class SolvingODEs:
             The next point of the solution.
         """
         
-        return (last_point[1], last_point[1] + step * round(f.subs({
+        return last_point[1] + step * round(f.subs({
             sym.Symbol("x"): last_point[0],
-            sym.Symbol("y"): last_point[1]
-        }).evalf(), self.prec))[1]
+            sym.Function("y")(sym.Symbol("x")): last_point[1]
+        }).evalf(), self.prec)
 
-    def euler_method(self, interval: list, step: float) -> list:
+    def euler_method(self, target: float, step: float) -> list:
         """
         This method implements Euler's method for numerical approximation of 
         solutions to initial value problems of ordinary differential equations (ODEs).
@@ -61,11 +62,12 @@ class SolvingODEs:
         if self.ode_type != "IVP":
             raise TypeError("This method only works for initial value problems.")
         
-        if self.points[0][0] != interval[0]:
-            raise ValueError("The initial point is not in the interval.")
+        if self.points[0][0] >= target:
+            raise ValueError("We can only approximate the solution for points beyond the initial point.")
          
-        f = sym.solve(self.equation, sym.Symbol("y'"))[0]
-        
+        f = sym.solve(self.equation, sym.Function("y")(sym.Symbol("x")).diff(sym.Symbol("x")))[0]
+
+        interval = [self.points[0][0], target]
         
         solutions = [
             (
@@ -90,28 +92,95 @@ class SolvingODEs:
 
         return solutions
     
+    def taylor_series_formulas (self, derivative: 'sym.Add', taylor_order: int, step: float) -> list:
+
+        x = sym.Symbol("x")
+        taylor_expansion = sym.Function("y")(x)
+        parcels = [
+            derivative
+        ]
+        
+        for i in range(1, taylor_order + 1):
+            taylor_expansion += parcels[-1] * (step**i) / sym.factorial(i)
+
+            parcels.append(
+                parcels[-1].diff(x).subs(
+                    {
+                        sym.Function("y")(x).diff(x): derivative
+                    }
+                )
+            )
+            
+        return taylor_expansion
+
+        ...
     
-    def taylor_series_method (self, interval: list, step: float) -> list:
+    def taylor_series_method (self, target, taylor_order: int, step: float) -> list:
         if self.ode_type != "IVP":
             raise TypeError("This method only works for initial value problems.")
         
-        if self.points[0][0] != interval[0]:
-            raise ValueError("The initial point is not in the interval.")
+        if self.points[0][0] >= target:
+            raise ValueError("We can only approximate the solution for points beyond the initial point.")
         
-        derivatives_funcs = {}
+        if self.ode_order > 1:
+            raise NotImplementedError("This method only works for first order ODEs.")
+    
 
-        derivatives_funcs[sym.Symbol("y'")] = sym.solve(
+        derivative: 'sym.Add' = sym.solve(
             self.equation,
-            sym.Symbol("y'")
+            sym.Function('y')(sym.Symbol("x")).diff(sym.Symbol("x"))
         )[0]
+
+        
+
+        taylor_expression = self.taylor_series_formulas(derivative, taylor_order, step)
+        print(taylor_expression)
+        solutions = [
+            (
+                round(self.points[0][0] + step, self.prec),
+                round(taylor_expression.subs(
+                    {
+                        sym.Symbol("x"): self.points[0][0],
+                        sym.Function("y")(sym.Symbol("x")): self.points[0][1]
+                    }
+                ), self.prec)
+            )
+        ]
+        interval = [self.points[0][0], target]
+
+        x_values_in_interval = np.arange(
+            interval[0] + 2 * step,
+            interval[1] + step,
+            step
+        )
+
+        for i, x_val in enumerate(x_values_in_interval):
+            solutions.append(
+                (
+                    x_val,
+                    round(taylor_expression.subs(
+                    {
+                        sym.Symbol("x"): x_val + step,
+                        sym.Function("y")(sym.Symbol("x")): solutions[i][1]
+                    }
+                ), self.prec)
+                )
+            )
+
+        return solutions
         
 
 
 
 if __name__ == "__main__":
-    x, y, y_1, y_2 = sym.symbols("x y y' y''")
+    x = sym.symbols("x")
+    y = sym.Function('y')(x)
 
-    eq: 'sym.Add' = x + y_2 * 9 - y + 2 - 5*y_1
+    eq: 'sym.Add' = y + y.diff(x) - 2 * x**3
 
-    print(str(eq.args[-1]).count("'"))
+
+
+    ode = SolvingODEs(eq, [(1, 0)])
+
+    print(ode.euler_method(1.2, 0.1))
 
