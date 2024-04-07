@@ -192,34 +192,34 @@ class SolvingODEs:
 
         return solutions
     
-    def runge_kutta_increment_func (self, f: 'sym.Add', rk_order: int, point: list, constants: dict, step: float) -> float:
+    def runge_kutta_increment (self, f: 'sym.Add', rk_order: int, point: list, constants: dict, step: float) -> float:
         x = sym.Symbol("x")
         y = sym.Function("y")(x)
-        x_ = point[0]
-        y_ = point[1]
-        m_vals = []
-        full_expression = y_
+        m_vals = [
+            f.subs({ 
+                x: point[0],
+                y: point[1]
+            }).evalf()
+        ]
 
-        for i in range(rk_order):
-            m = f.subs({ 
+        full_expression = 0
+
+        for i in range(rk_order - 1):
+
+            x_ = point[0] + step * constants["b"][i]
+            y_ = point[1] + sum([step * constants["b"][j + 1] * m_vals[j] for j in range(i+1)])
+
+            m_vals.append(f.subs({ 
                 x: x_,
                 y: y_
-            }).evalf()
+            }).evalf())
+        
+        parcels = [constants["a"][k] * m_vals[k] * step for k in range(rk_order)]
 
-            m_vals.append(m)
-
-            x_ = x_ + step * constants["b"][i]
-            y_ = y_ + sum([step * constants["a"][j + 1] * m_vals[j] for j in range(i)])
-            parcels = [constants["a"][k] * m_vals[k] * step for k in range(rk_order - 1)]
-            print ( parcels)
-        full_expression += parcels
-
+        full_expression += sum(parcels)
 
         return full_expression
 
-
-        
-        ...
         
     def runge_kutta_method (self, target: float, rk_order: int, step: float, constants: dict) -> list:
         if self.ode_type != "IVP":
@@ -228,25 +228,24 @@ class SolvingODEs:
         x = sym.Symbol("x")
         y = sym.Function("y")(x)
 
-        bigger_derivative = list(self.points.keys())[-1]
+        bigger_derivative = y.diff(x, self.ode_order)
 
         f = sym.solve(self.equation, bigger_derivative)[0]
 
         solutions = [
-           (round(self.points[y][0][0]) + step,
-            self.runge_kutta_increment_func(f, rk_order, self.points[y][0], constants, step).subs(
-                {
-                    x: self.points[y][0][0],
-                    y: self.points[y][0][1]
-                }
-            ))
+           (
+            round(self.points[y][0][0]) + step,
+            round(self.runge_kutta_increment(f, rk_order, self.points[y][0], constants, step) + self.points[y][0][1],
+                  self.prec)
+           )
         ]
 
         for i, x_val in enumerate(np.arange(self.points[y][0][0] + 2*step, target + step, step)):
             solutions.append(
                 (
-                    x_val,
-                    self.runge_kutta_increment_func(f, rk_order, solutions[i], constants, step)
+                    round(x_val, self.prec),
+                    round(self.runge_kutta_increment(f, rk_order, solutions[i], constants, step) + solutions[i][1],
+                          self.prec)
                 )
             )
 
@@ -262,12 +261,12 @@ if __name__ == "__main__":
 
 
 
-    ode = SolvingODEs(eq, 1, {y: [(1, 0)]}, 7)
+    ode = SolvingODEs(eq, 1, {y: [(1, 0)]}, 6)
 
     constants = {
         "a": [0.25, 0.75],
         "b": [2/3, 2/3]
     }
 
-    print(ode.runge_kutta_method(1.2, 2, 0.1, constants))
+    print(ode.runge_kutta_method(1.5, 2, 0.1, constants))
 
