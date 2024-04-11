@@ -76,7 +76,7 @@ class Func:
         
     def verify_derivate (self, a) -> bool:
         # Verify if the derivate of the function in x=a is 0
-        if self.dfunc() == 0:
+        if self.dfunc().f(a) == 0:
             print('Derivative = 0')
             return False
         
