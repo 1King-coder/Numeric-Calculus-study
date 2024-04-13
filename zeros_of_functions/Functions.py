@@ -90,6 +90,67 @@ class Func:
             return False
         
         return True
+    
+    def get_contration_interval (self, fi_func: 'Func'):
+        
+        x = sym.Symbol('x')
+
+        try:
+            contraction_interval = sym.reduce_inequalities(
+                sym.Abs(Func(fi_func.dfunc(), x).func) < 1, x
+            )
+
+            return contraction_interval
+        
+        except Exception as e:
+            print(f"Cannot get contraction interval.\nError: {e}")
+            return None
+
+       
+    
+    def fixed_point_method (self, fi_func: 'Func', a: float, TOL: float) -> dict:
+
+
+        
+        iteration = 0
+        iterations_list = []
+        x = a
+
+        contraction_interval = self.get_contration_interval(fi_func)
+        
+        if contraction_interval is None:
+            return {}
+
+        if not bool(contraction_interval.subs({sym.Symbol('x'): a})):
+            print("Ponto inicial não está no intervalo de contração dessa função de ponto fixo!")
+            return {}
+
+        while abs(self.f(x)) > TOL and iteration < 9999:
+            
+            iterations_list.append(
+                {
+                    'iter': iteration,
+                    f'a{iteration}': a,
+                    f'x{iteration}': x,
+                    f'f(x{iteration})': self.f(x),
+                }
+            )
+
+            x = fi_func(x)
+            iteration += 1
+
+        iterations_x, iterations_y = [], []                  
+        for i, element in enumerate(iterations_list):
+            iterations_x.append(element[f'x{i}'])
+            iterations_y.append(element[f'f(x{i})'])
+
+        return {
+            'result': x,
+            'iter_x': iterations_x,
+            'iter_y': iterations_y,
+            'iterations': iterations_list
+        }
+
 
     def bissection_method (self, a: float, b: float, TOL: float) -> dict:
         """
