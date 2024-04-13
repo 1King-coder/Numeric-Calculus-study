@@ -92,7 +92,12 @@ class Func:
         return True
     
     def get_contration_interval (self, fi_func: 'Func'):
-        
+        """
+        It calculates the contraction interval of a function. It uses sympy to 
+        reduce inequalities involving the absolute value of the derivative of 
+        the input function. If successful, it returns the contraction interval, 
+        otherwise, it prints an error message and returns None.
+        """
         x = sym.Symbol('x')
 
         try:
@@ -109,9 +114,15 @@ class Func:
        
     
     def fixed_point_method (self, fi_func: 'Func', a: float, TOL: float) -> dict:
+        """
+        This is a Python function called fixed_point_method that implements the 
+        fixed-point iteration method to find the root of a function. It takes a 
+        function fi_func, an initial approximation a, and a tolerance TOL as input, 
+        and returns a dictionary containing the result of the iteration, the list 
+        of x and y coordinates, and the iteration details. If the initial point is 
+        not in the contraction interval, it returns an empty dictionary.
+        """
 
-
-        
         iteration = 0
         iterations_list = []
         x = a
